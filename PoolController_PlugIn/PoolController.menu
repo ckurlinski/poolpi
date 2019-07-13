@@ -1,0 +1,42 @@
+#!/bin/bash
+#------------------------------------------------------------------------------#
+######################### PoolController Menu Name #############################
+#------------------------------------------------------------------------------#
+# PoolController Menu
+  _pool_controller_menu()  {
+      clear
+      _query "Checking nodejs-poolController install..."
+      _nodejs_installed_version
+      _nodejs_check_global_cache
+      _nodejs_current_user_config_path
+      _pool_controller_install_test
+      _pool_controller_status
+      HEADING="PoolController Menu"
+      # Menu listing
+        MENU_LIST=(
+          "Tail Log Output"
+          "Monitor Log File"
+          "View Rotated Log Files"
+          "Start PoolController"
+          "Stop PoolController"
+          "Install Pool Controller"
+          "Update PoolController Installation"
+          "Pool Service Compatible executable file builder"
+          "Return"
+        )
+      # Command map
+        MENU_CMD=(
+          '_pool_controller_view_log'
+          '_pool_controller_monitor_log'
+          '_pool_controller_view_log_files'
+          '_pool_controller_run'
+          '_pool_controller_stop'
+          '_pool_controller_install'
+          '_pool_controller_update'
+          '_poolcontroller_service_file_builder'
+          'Main_Menu'
+          )
+      # Execute Menu
+        _menu_function
+  }
+#------------------------------------------------------------------------------#

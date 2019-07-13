@@ -1,0 +1,455 @@
+#!/bin/bash
+#------------------------------------------------------------------------------#
+#                       Date Formatting and Default PATH                       #
+#------------------------------------------------------------------------------#
+  ## Date Format ##
+    DATE_FORMAT="+%m%d%H%M%Y%S"
+  ## Current base path ##
+    DEFAULT_PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/X11/bin"
+#------------------------------------------------------------------------------#
+#                       Setting Terminal and Menu Widths                       #
+#------------------------------------------------------------------------------#
+  ## Setting Terminal Width ##
+    TERM_WIDTH=($(tput cols))
+  ## Setting Half Terminal Width
+    if [[ ${TERM_WIDTH} -ge 120 ]]; then
+      MENU_WIDTH=($((${TERM_WIDTH} / 2 )))
+    else
+      MENU_WIDTH=${TERM_WIDTH}
+    fi
+#------------------------------------------------------------------------------#
+#                          Color Formatting Functions                          #
+#------------------------------------------------------------------------------#
+  ## _set_colors ##
+  # Set Color codes to names
+    _set_colors() {
+      reset=$(echo -en '\033[0m')
+      red=$(echo -en '\033[00;31m')
+      green=$(echo -en '\033[00;32m')
+      yellow=$(echo -en '\033[00;33m')
+      blue=$(echo -en '\033[00;34m')
+      magenta=$(echo -en '\033[00;35m')
+      purple=$(echo -en '\033[00;35m')
+      cyan=$(echo -en '\033[00;36m')
+      lightgray=$(echo -en '\033[00;37m')
+      lred=$(echo -en '\033[01;31m')
+      lgreen=$(echo -en '\033[01;32m')
+      lyellow=$(echo -en '\033[01;33m')
+      lblue=$(echo -en '\033[01;34m')
+      lmagenta=$(echo -en '\033[01;35m')
+      lpurple=$(echo -en '\033[01;35m')
+      lcyan=$(echo -en '\033[01;36m')
+      white=$(echo -en '\033[01;37m')
+    }
+  #----------------------------------------------------------------------------#
+  ## _set_colors_darwin ##
+  # Set Color codes to names
+    _set_colors_darwin() {
+      reset=$(echo '\033[0m')
+      red=$(echo '\033[00;31m')
+      green=$(echo '\033[00;32m')
+      yellow=$(echo '\033[00;33m')
+      blue=$(echo '\033[00;34m')
+      magenta=$(echo '\033[00;35m')
+      purple=$(echo '\033[00;35m')
+      cyan=$(echo '\033[00;36m')
+      lightgray=$(echo '\033[00;37m')
+      lred=$(echo '\033[01;31m')
+      lgreen=$(echo '\033[01;32m')
+      lyellow=$(echo '\033[01;33m')
+      lblue=$(echo '\033[01;34m')
+      lmagenta=$(echo '\033[01;35m')
+      lpurple=$(echo '\033[01;35m')
+      lcyan=$(echo '\033[01;36m')
+      white=$(echo '\033[01;37m')
+    }
+#------------------------------------------------------------------------------#
+#                           Text Formatting Functions                          #
+#               These functions are called through out the scripts             #
+#                        to format Q & A reading easier                        #
+#------------------------------------------------------------------------------#
+    # printf text formatting                                                 #
+    # Reset screen                                                           #
+    #   printf "\33[0m"                                                      #
+    # Print Bold Text String:                                                #
+    #   printf "\033[1m %s"                                                  #
+    # Print Bold Text String with White Background:                          #
+    #   printf "\033[1;00;107m %s"                                           #
+    # Print Bold Text String with White Background and Red Text:             #
+    #   printf "\033[1;31;107m %s \33[0m\n"                                  #
+  #--------------------------------------------------------------------------#
+  ## _text_input_formatting ##
+  # Passes the input text to be sparsed and variables values assigned
+    _text_input_formatting() {
+      TEXT_INPUT="${1}"
+      TEXT_INPUT_LEN="${#1}"
+      OFFSET=($(( ${TEXT_INPUT_LEN} / 2 )))
+      TEXT_WIDTH=($((( ${MENU_WIDTH} / 2 ) - ${OFFSET} )))
+      SEP_WIDTH=${MENU_WIDTH}
+      TEXT_WIDTH_REMANDER="$((${SEP_WIDTH} -  ${TEXT_INPUT_LEN} -${TEXT_WIDTH} ))"
+    }
+  #----------------------------------------------------------------------------#
+  ## _header ##
+  # Header text format function
+  # Main Text uses White Background (107) / Light Blue Text (94)
+  # Seperators uses Blue Background
+    _header() {
+      _text_input_formatting "${1}"
+      # Top Header Seperator
+      awk -v s=${SEP_WIDTH} 'BEGIN {
+        for(c=0;c<s;c++)
+        printf "\033[107m "
+        printf "\033[0m \n"
+      }'
+      # Main Text
+      awk \
+        -v s="${TEXT_WIDTH}" \
+        -v i="${TEXT_INPUT[@]}" \
+        -v e="${TEXT_WIDTH_REMANDER}" \
+        'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[00m "
+          printf "\033[00;97m" i
+          for(c=0;c<e;c++)
+          printf "\033[00m "
+          printf "\033[0m \n"
+        }'
+      # Bottom Header Seperator
+      awk -v s=${SEP_WIDTH} 'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[107m "
+          printf "\033[0m \n"
+        }'
+    }
+  #----------------------------------------------------------------------------#
+  ## _query	##
+  # Query Formatting text function
+  # Color = red = \033[00;31m
+    _query() {
+      # Print Red Separator
+      _text_input_formatting "${1}"
+      awk -v s=${SEP_WIDTH} 'BEGIN {
+        for(c=0;c<s;c++)
+        printf "\033[106m "
+        printf "\033[0m \n"
+      }'
+      awk \
+        -v s="${TEXT_WIDTH}" \
+        -v i="${TEXT_INPUT[@]}" \
+        -v e="${TEXT_WIDTH_REMANDER}" \
+        'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[00m "
+          printf "\033[00;96m" i
+          for(c=0;c<e;c++)
+          printf "\033[00m "
+          printf "\033[0m \n"
+        }'
+      awk -v s=${SEP_WIDTH} 'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[106m "
+          printf "\033[0m \n"
+        }'
+    }
+  #----------------------------------------------------------------------------#
+  ## _select	##
+  # Selection text format function
+    _select() {
+      printf "% - 50s\033[33m %s \033[0m\n" "$@"
+    }
+  #----------------------------------------------------------------------------#
+  ## _sep ##
+  # Seperator line format function
+  # Color = magenta = \033[00;35m
+    _sep() {
+      awk -v s=${MENU_WIDTH} 'BEGIN {
+        for(c=0;c<s;c++)
+        printf "\033[0;106;30m "
+        printf "\033[0m \n"
+      }'
+    }
+  #----------------------------------------------------------------------------#
+  ## _error_sep ##
+  # Seperator line format function
+  # Color = magenta = \033[00;35m
+    _error_sep() {
+      awk -v s=${MENU_WIDTH} 'BEGIN {
+        for(c=0;c<s;c++)
+        printf "\033[101m "
+        printf "\033[0m \n"
+      }'
+    }
+  #----------------------------------------------------------------------------#
+  ## _success	##
+  # Successful text format function
+    _success() {
+      _text_input_formatting "${1}"
+      awk \
+        -v s="$((${TEXT_WIDTH} -2 ))" \
+        -v i="${TEXT_INPUT[@]}" \
+        -v e="${TEXT_WIDTH_REMANDER}" \
+        'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[00m "
+          printf "\033[00;92m✔ " i
+          for(c=0;c<e;c++)
+          printf "\033[00m "
+          printf "\033[0m \n"
+        }'
+    }
+  #----------------------------------------------------------------------------#
+  ## _checking ##
+  # Successful text format function
+    _checking() {
+      _text_input_formatting "${1}"
+      awk \
+        -v s="$((${TEXT_WIDTH} -2 ))" \
+        -v i="${TEXT_INPUT[@]}" \
+        -v e="${TEXT_WIDTH_REMANDER}" \
+        'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[103m "
+          printf "\033[103;30m✔ " i
+          for(c=0;c<e;c++)
+          printf "\033[103m "
+          printf "\033[0m \n"
+        }'
+    }
+  #----------------------------------------------------------------------------#
+  ## _error ##
+  # Error text formatting function
+    _error() {
+      _text_input_formatting "${1}"
+      awk \
+        -v s="$((${TEXT_WIDTH} -2 ))" \
+        -v i="${TEXT_INPUT[@]}" \
+        -v e="${TEXT_WIDTH_REMANDER}" \
+        'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[107m "
+          printf "\033[00;107;91m✖ " i
+          for(c=0;c<e;c++)
+          printf "\033[107m "
+          printf "\033[0m \n"
+        }'
+    }
+  #----------------------------------------------------------------------------#
+  ## _removed ##
+  # Removed text formtting function
+    _removed() {
+      printf "\033[32m✖ %s\033[0m\n" "$@"
+    }
+  #----------------------------------------------------------------------------#
+  ## _warning ##
+  # Warning text formatting function
+    _warning() {
+      _text_input_formatting "${1}"
+      awk -v s=${SEP_WIDTH} 'BEGIN {
+        for(c=0;c<s;c++)
+        printf "\033[103m "
+        printf "\033[0m \n"
+      }'
+      awk \
+        -v s="${TEXT_WIDTH}" \
+        -v i="${TEXT_INPUT[@]}" \
+        -v e="${TEXT_WIDTH_REMANDER}" \
+        'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[00m "
+          printf "\033[93m" i
+          for(c=0;c<e;c++)
+          printf "\033[00m"
+          printf "\033[0m \n"
+        }'
+      awk -v s=${SEP_WIDTH} 'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[103m "
+          printf "\033[0m \n"
+        }'
+    }
+  #----------------------------------------------------------------------------#
+  ## _note ##
+  # Note text formatting function
+    _note() {
+      _text_input_formatting "${1}"
+      awk \
+        -v s="${TEXT_WIDTH}" \
+        -v i="${TEXT_INPUT[@]}" \
+        -v e="${TEXT_WIDTH_REMANDER}" \
+        'BEGIN {
+          for(c=0;c<s;c++)
+          printf "\033[103m "
+          printf "\033[103;30m" i
+          for(c=0;c<e;c++)
+          printf "\033[103m "
+          printf "\033[0m \n"
+        }'
+    }
+  #----------------------------------------------------------------------------#
+    ## _print_file ##
+    # Print a system file
+      _print_file() {
+        printf "\033[00;43;30m--> %s\033[0m\n" "$@ <--"
+      }
+  #----------------------------------------------------------------------------#
+  ## _all_caps ##
+  # convert to capitol letters
+    _all_caps() {
+      # Input STR - Output STR_CAPS
+      STR_CAPS=(`echo ${STR} | awk '{print toupper($0)}'`)
+    }
+#------------------------------------------------------------------------------#
+#                               OS Detect Function                             #
+#                       Used to detect Operating Systems                       #
+#                         Needed to determine correct:                         #
+#      command formatting, Plugin compatiblity, and Software installation      #
+#------------------------------------------------------------------------------#
+  ## _system_os_arch_detect ##
+  # Get system OS and Arch
+    _system_os_arch_detect() {
+      SYS_OS=(`uname`)
+      case $(uname -m) in
+        armhf ) SYS_ARCH="armv6l" ;;
+        armv7l ) SYS_ARCH="armv7l" ;;
+        x86-64 ) SYS_ARCH="x64" ;;
+        i686 ) SYS_ARCH="x86" ;;
+        i386 ) SYS_ARCH="x86" ;;
+        x86_64 ) SYS_ARCH="x64" ;;
+        * )	SYS_ARCH="0" ;;
+      esac
+      _checking "Checking OS type..."
+      _success "Installed OS = ${SYS_OS}"
+      _checking "Checking System Arch..."
+      _success "System Arch = ${SYS_ARCH}"
+    }
+#------------------------------------------------------------------------------#
+#                               Lists and Checks                               #
+#------------------------------------------------------------------------------#
+  ## _ans_check ##
+  # Null responce check
+    _ans_check() {
+      while [ -z "${ANSWER}" ]; do
+        _error "null string"
+        _header "Re enter value"
+        read ANSWER
+      done
+    }
+  #----------------------------------------------------------------------------#
+  ## _list_template ##
+  # List Template
+  # Script wide listing function
+  # Needs "LIST_ARRAY" array input assigned for this to work
+  # Sets selection value to "LIST_OUTPUT"
+  # Count Starts at 1
+    _list_template() {
+      LIST_ARRAY+=("Cancel")
+      LIST_COUNTER=
+      LIST_COUNT=1
+      #_header "${HEADING}"
+      for ARRAY_ITEM in "${LIST_ARRAY[@]}"; do
+        if [[ "${LIST_COUNT}" -eq "${#LIST_ARRAY[@]}" ]]; then
+          SELECTED_ARRAY_ITEM[${LIST_COUNT}]=${ARRAY_ITEM}
+          _error "${LIST_COUNT} ${SELECTED_ARRAY_ITEM[${LIST_COUNT}]}"
+          ((LIST_COUNT++))
+        else
+          SELECTED_ARRAY_ITEM[${LIST_COUNT}]=${ARRAY_ITEM}
+          _select "${LIST_COUNT} ${SELECTED_ARRAY_ITEM[${LIST_COUNT}]}"
+          ((LIST_COUNT++))
+        fi
+      done
+      LIST_COUNTER=$((${LIST_COUNT} - 1))
+      read SELECTED_INPUT
+      if [[ ${#LIST_ARRAY[@]} == ${SELECTED_INPUT} ]]; then
+        _warning "Cancelling.... Returning to Main Menu"
+        Main_Menu
+      else
+        _list_test_loop
+        LIST_OUTPUT=${SELECTED_ARRAY_ITEM[${SELECTED_INPUT}]}
+      fi
+    }
+  #----------------------------------------------------------------------------#
+  ## _list_input_test ##
+  # Test if input is a number
+    _list_input_test() {
+      case ${SELECTED_INPUT} in
+        ''|*[!0-9]*)  SELECTED_INPUT=
+                      _error "Bad Entry";;
+                  *)  _success "Entered - ${SELECTED_INPUT}";;
+      esac
+    }
+  #----------------------------------------------------------------------------#
+  ## _list_test_loop ##
+  # Correct the selection input
+    _list_test_loop() {
+      while [ -z ${SELECTED_INPUT} ] || \
+        (( ${SELECTED_INPUT} > ${LIST_COUNTER} )) && _error "Select Entry"; do
+        _list_template
+        _list_input_test
+      done
+    }
+#------------------------------------------------------------------------------#
+#                                 Menu Functions                               #
+#------------------------------------------------------------------------------#
+  ## _menu_input_test ##
+  # Test if input is a number
+    _menu_input_test() {
+      case ${MENU_SELECTED} in
+        ''|*[!0-9]*)  MENU_SELECTED=
+                      _error "Bad Entry";;
+                  *)  ;;
+      esac
+    }
+  #----------------------------------------------------------------------------#
+  ## _menu_test_loop ##
+  # Correct the selection input
+    _menu_test_loop() {
+      while [ -z ${MENU_SELECTED}  ] \
+        || (( ${MENU_SELECTED} >= ${MENU_COUNTER} )) && \
+        _note "Select Entry"; do
+        _menu_list_template
+        _menu_input_test
+      done
+    }
+  #----------------------------------------------------------------------------#
+  ## _menu_list_template ##
+  # Menu List Function
+  # Input MENU_LIST
+  # Output MENU_OUTPUT
+    _menu_list_template() {
+      MENU_SELECTED_INPUT=
+      MENU_COUNTER=
+      MENU_COUNT=1
+      # Main Menu
+      _header "${HEADING}"
+      _query "Enter Selection"
+      for MENU_ITEM in "${MENU_LIST[@]}"; do
+        MENU_SELECTED_INPUT[${MENU_COUNT}]=${MENU_ITEM}
+        _select "${MENU_COUNT} - ${MENU_SELECTED_INPUT[${MENU_COUNT}]}"
+        ((MENU_COUNT++))
+      done
+      MENU_COUNTER=${MENU_COUNT}
+      read MENU_SELECTED
+      _menu_input_test
+      _menu_test_loop
+      MENU_COUNT=$(( ${MENU_SELECTED} - 1 ))
+      MENU_OUTPUT=${MENU_SELECTED_INPUT[${MENU_SELECTED}]}
+    }
+  #----------------------------------------------------------------------------#
+  ## _menu_command_run ##
+  # Command to run from menu command array
+    _menu_command_run() {
+      ${MENU_CMD[$MENU_COUNT]}
+    }
+  #----------------------------------------------------------------------------#
+  ## _menu_function ##
+  # Main Menu Function
+    _menu_function() {
+      while :
+      do
+        ## Generate menu list from menu list array
+        _menu_list_template
+        ## Run choosen command from menu command array
+        _menu_command_run
+      done
+    }
+#------------------------------------------------------------------------------#

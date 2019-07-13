@@ -1,0 +1,222 @@
+#!/bin/bash
+#------------------------------------------------------------------------------#
+## _plugin_select_sed_edit ##
+# Change the sed edit command based on the OS Name
+  _plugin_select_sed_edit() {
+    OS_NAME=($(uname))
+    [ ${OS_NAME} == "Darwin" ] && SED_EDIT_CMD="sed -i .bak" || SED_EDIT_CMD="sed -i"
+  }
+#------------------------------------------------------------------------------#
+## _select_plugin_config ##
+# Choose Plugin Configuration File to View or Edit
+  _select_plugin_config() {
+    _header "Select Plugin Configuration File:"
+    LIST_ARRAY=($(awk -F _ '/.conf/ {print$1}' ${SOURCE}/incl.sh | awk '{print$2}'))
+    _list_template
+    PLUGIN_NAME=${LIST_OUTPUT}
+    _select "Working with Configuration File for Plugin: ${PLUGIN_NAME}"
+  }
+#------------------------------------------------------------------------------#
+## _plugin_get_config ##
+# Get the name of the current Plugin Config File listed in incl.sh
+  _plugin_get_config(){
+    # Select Plugin
+      _select_plugin_config
+    # Get Config Name of Current Plugin
+      PLUGIN_CONFIG=($(grep ${PLUGIN_NAME}.conf ${SOURCE}/incl.sh | awk '{print$NF}'))
+    # Define Temp File to extract only defined variables
+      PLUGIN_CONFIG_TMP="${SOURCE}/${PLUGIN_NAME}_config.tmp"
+    # Define Temp File to edit variable / values
+      PLUGIN_CONFIG_TMP1="${PLUGIN_CONFIG_TMP}1"
+    # Define Temp File to Dump Expanded Values 
+      PLUGIN_CONFIG_VALUES="${SOURCE}/${PLUGIN_NAME}.values"
+    # Define Temp File to Dump Expanded Values - Colunm Formatted
+      PLUGIN_CONFIG_VALUES_COL="${SOURCE}/${PLUGIN_NAME}.colunm.value"
+    # Extract just the Variable Names and Values from Plugin Config File
+      awk <${SOURCE}/${PLUGIN_CONFIG} -F= '/=/{print$1"="$2}' | sed "s/^[ \t]*//" | tr -d "\"" > ${PLUGIN_CONFIG_TMP}
+    # Show Working Plugin Config File Name
+      _header "Working with: ${PLUGIN_CONFIG}"
+    # Notify about Plugin Config Dump
+      #_success "${PLUGIN_NAME}: Temp Config Extracted"
+  }
+#------------------------------------------------------------------------------#
+## _plugin_select_var ##
+# Select Variable from Plugin Temp Config File
+  _plugin_select_var() {
+    # Define List Header
+      _note "Select Config Value"
+    # Define List Input Array
+      LIST_ARRAY=($(awk -F= '{print$1}' ${PLUGIN_CONFIG_TMP}))
+    # Execute List
+      _list_template
+      CURRENT_VARIABLE=${LIST_OUTPUT}
+    # Show Selected Variable : Value Pair
+      _header "Selected Variable : Value Pair"
+    # Show Variable / Value
+      CURRENT_VALUE=($(awk -v var=${CURRENT_VARIABLE} -F= '{
+        values[$1]=$2} END{print values[var]}' ${PLUGIN_CONFIG_TMP}))
+      _warning "${CURRENT_VARIABLE} : ${CURRENT_VALUE[@]}"
+  }
+#------------------------------------------------------------------------------#
+## _plugin_commit_edit ##
+# Commit Edited Value to Real Plugin Config File
+  _plugin_commit_edit() {
+    _select "Commit Changes to Config File ( y | N )?"
+    read ANSWER
+    _ans_check
+    case ${ANSWER} in
+      y|Y)  _header "Committing Changes to Config File"
+            ${SED_EDIT_CMD} "s/${OLD_VALUE[@]}/${NEW_VALUE[@]}/g" ${PLUGIN_CONFIG}
+            grep ${CURRENT_VARIABLE} ${PLUGIN_CONFIG}
+            if [[ ${OS_NAME_TEST} == 1 ]];then
+              _note "Removing Backup Files"
+              rm ${PLUGIN_CONFIG}.bak
+            fi
+            ;;
+        *)  _error "Doing Nothing to Config File"
+            ;;
+    esac
+  }
+#------------------------------------------------------------------------------#
+## _plugin_config_edit ##
+# Edit variables listed in Plugin Config File
+  _plugin_config_edit() {
+    # Get OS Name to define sed edit format
+      _plugin_select_sed_edit
+    # Get Config Name of Current Plugin
+      _plugin_get_config
+    # Selected Variable
+      _plugin_select_var
+    # First Stage: Ask if you want to edit Value
+    _query "Edit Variable ( y | N ): ${CURRENT_VARIABLE} ?"
+    read ANSWER
+    _ans_check
+    case ${ANSWER} in
+      y|Y)  _warning "Editing Variable: ${CURRENT_VARIABLE} - Enter New Value"
+            read ANSWER
+            _ans_check
+            # Get Old Value of Variable
+              OLD_VALUE=($(awk -v var=${CURRENT_VARIABLE} -F= '{values[$1]=$2} END{print values[var]}' ${PLUGIN_CONFIG_TMP}))
+            # Format New Value of Variable
+              NEW_VALUE="${ANSWER[@]}"
+            # Show Changes 
+              #NEW_VALUE=$(echo ${NEW_VALUE[@]} | awk '{print"\""$0"\""}')
+              echo "Old Value: ${OLD_VALUE[@]}"
+              echo "Updating Variable to: ${CURRENT_VARIABLE} = ${NEW_VALUE[@]}"
+            # Do Changes in Plugin Temp File before Real Commit
+              awk <${PLUGIN_CONFIG_TMP} -v old="${OLD_VALUE}" -v new="${NEW_VALUE}" -F= '{ gsub(old,new,$0);print$0}' >${PLUGIN_CONFIG_TMP1}
+              cat ${PLUGIN_CONFIG_TMP1}
+              #cat ${PLUGIN_CONFIG_TMP}
+              read huh 
+              #${SED_EDIT_CMD} "s/${OLD_VALUE[@]}/${NEW_VALUE[@]}/g" ${PLUGIN_CONFIG_TMP}
+              #cat ${PLUGIN_CONFIG_TMP}
+              #read huh
+              grep ${CURRENT_VARIABLE} ${PLUGIN_CONFIG_TMP}
+            # Garbage cleanup
+              if [[ ${OS_NAME_TEST} == 1 ]];then
+                rm ${PLUGIN_CONFIG_TMP}.bak
+              fi
+              rm ${PLUGIN_CONFIG_TMP}
+            # Second Stage: Really Execute Value Changes to Real Plugin Config
+              _plugin_commit_edit
+            ;;
+        *)  _error "Doing Nothing, Aborting...."
+            Main_Menu
+            ;;
+    esac
+  }
+#------------------------------------------------------------------------------#
+## _plugin_resovle_variables ##
+# Resolve Variables
+  _plugin_resovle_variables() {
+    # Get Config Name of Current Plugin
+      _plugin_get_config
+    # Expand variables Command
+      CONFIG_VALUES=$(eval "echo \"$(cat ${PLUGIN_CONFIG_TMP})\"")
+    # Output Variable : Values to Plugin Config Values File
+      echo "${CONFIG_VALUES}" | \
+        sed 's/=/=\"/g' | \
+        awk -F= '{print$0"\""}' > ${PLUGIN_CONFIG_VALUES}
+      echo "${CONFIG_VALUES}" | \
+        sed 's/=/=\"/g' | \
+        awk -F= '{print$0"\""}' | \
+        column -t -s "=" > ${PLUGIN_CONFIG_VALUES_COL}
+    # Output the Expanded Variables to ${PLUGIN_NAME}.html
+      #_export_config_html
+    # Output the Expanded Variables to ${PLUGIN_NAME}.json
+      #_export_config_json
+    # Output the Expanded Variables to screen
+      _note "Expanded Variables from ${PLUGIN_NAME} Config File"
+      cat ${PLUGIN_CONFIG_VALUES_COL}
+      #Garbage cleanup
+      rm ${PLUGIN_CONFIG_TMP}
+      rm ${PLUGIN_CONFIG_VALUES}
+      rm ${PLUGIN_CONFIG_VALUES_COL}
+    # Pause for review
+      _note "Hit the Any Key to Continue....."
+      read huh
+  }
+  #------------------------------------------------------------------------------#
+  ## _export_config_html ##
+  # Export Resolved Plugin Configuration File as .html
+    _export_config_html() {
+      [ -f ${PLUGIN_NAME}.html ] && rm -rf ${PLUGIN_NAME}.html 
+      _query "Export as HTML ( y | N ) ?"
+      read ANSWER
+      _ans_check
+      case ${ANSWER} in
+        y|Y)  
+            _header "Exporting ${PLUGIN_NAME} as ${PLUGIN_NAME}.html"
+            _export_config_json ${PLUGIN_CONFIG_VALUES}
+            # Output the Expanded Variables to ${PLUGIN_NAME}.html 
+            echo "<html><head><title>Showing configuration file for: ${PLUGIN_CONFIG}" >> ${PLUGIN_NAME}.html
+            echo "</title></head><body>" >> ${PLUGIN_NAME}.html
+            echo "<h1>Variable / Values</h1>" >> ${PLUGIN_NAME}.html
+            echo "<pre>" >> ${PLUGIN_NAME}.html
+            echo "$(cat ${PLUGIN_CONFIG_VALUES_COL})" >> ${PLUGIN_NAME}.html
+            echo "</pre>" >> ${PLUGIN_NAME}.html
+            echo "<center>Information generated on $(date)</center>" >> ${PLUGIN_NAME}.html
+            echo "</body></html>" >> ${PLUGIN_NAME}.html
+            ;;
+          *) _error "Doing Nothing, Aborting....."
+            ;;
+      esac
+    }
+  #------------------------------------------------------------------------------#
+  ## _export_config_json ##
+  # Export Resolved Plugin Configuration File as .json
+    _export_config_json() {
+      [ -f ${PLUGIN_NAME}.json ] && rm -rf ${PLUGIN_NAME}.json
+      _query "Export as JSON ( y | N ) ?"
+      read ANSWER
+      _ans_check
+      case ${ANSWER} in
+        y|Y)
+            _header "Exporting ${PLUGIN_NAME} as ${PLUGIN_NAME}.json"
+            INPUT=${PLUGIN_CONFIG_VALUES}
+            LINES=$(awk 'END {print NR}' ${INPUT})
+            awk -v l="${LINES}" -F "=" <${INPUT} '
+              BEGIN {
+                { print "["    }
+                { print  " {"  }
+                }
+              { { if (NR<l)   {
+                    print "   ""\"" $1 "\"" " : " $2 "," "
+                    }
+                }
+                { if (NR==l)  {
+                    print "   ""\"" $1 "\"" " : " $2 "\"" "
+                    }
+                  }
+                }
+              END
+              {
+                {print "  }"}
+                {print "]"}
+              }' > ${PLUGIN_NAME}.json
+            ;;
+          *) _error "Doing Nothing, Aborting....."
+            ;;
+      esac
+    }
+#------------------------------------------------------------------------------#

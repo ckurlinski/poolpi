@@ -1,0 +1,39 @@
+#!/bin/bash
+#------------------------------------------------------------------------------#
+############################# NodeJS Menu list #################################
+#------------------------------------------------------------------------------#
+# NodeJS Menu
+  _nodejs_menu()  {
+    clear
+    _query "Checking NodeJS Install"
+    _nodejs_installed_version
+    _nodejs_check_global_cache
+    _nodejs_current_user_config_path
+    HEADING="NodeJS Menu"
+    #_nodejs_current_user_config_path
+    # Menu listing
+      MENU_LIST=(
+        "NodeJS Install"
+        "Remove NodeJS"
+        "NPM Update"
+        "View NPM Config"
+        "NodeJS Set Global Variables"
+        "check local config"
+        "Input NodeJS or NPM Command to run"
+        "Return"
+      )
+    # Command map
+      MENU_CMD=(
+        '_nodejs_install'
+        '_nodejs_remove'
+        '_nodejs_update_install'
+        '_nodejs_view_config'
+        '_nodejs_set_global'
+        '_nodejs_current_user_config_check'
+        '_node_npm_command_run'
+        'Main_Menu'
+        )
+    # Execute Menu
+      _menu_function
+  }
+#------------------------------------------------------------------------------#

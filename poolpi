@@ -1,0 +1,289 @@
+#!/bin/bash
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+#             I can assure you that, while this code looks like                #
+#          it was written by a First Year Computer Science Major               #
+#           with Alcohol Posioning, I have never taken a class.....            #
+#              So if you have complaints with how its coded.......             #
+#                          Fork Off and do better                              #
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+#                   Code Formatting is done in VS Code                         #
+#              Convert Tab to Spaces and Indention is (2) Spaces               #
+#          And I try to keep the lines to 80 Spaces Wide, Try anyway           #
+#                    To unhide: [COMMAND] K + [COMMAND] J                      #
+#                   and to hide < [COMMAND]K + [COMMAND] 0                     #
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+#------------------------------------------------------------------------------#
+#                    Current Working Directory / Set SOURCE                    #
+#------------------------------------------------------------------------------#
+  # Follow symbolic link to source directory and run from that directory
+  # Test which OS is installed and set SOURCE Correctly
+    if [ $(uname -s) == "Darwin" ]; then
+      SOURCE=${PWD}
+    else
+      SOURCE=$(dirname $(readlink -f $0))
+    fi
+    cd ${SOURCE}
+#------------------------------------------------------------------------------#
+#                       If incl.sh file exists - remove it                     #
+#------------------------------------------------------------------------------#
+  ## _source_incl_rm ##
+  # Remove exiting incl.sh
+    _source_incl_rm() {
+      [ -f "incl.sh" ] && INCL_TEST=1 || INCL_TEST=0
+      case ${INCL_TEST} in
+        1)  rm ${SOURCE}/incl.sh && touch ${SOURCE}/incl.sh
+            ;;
+        0)  touch ${SOURCE}/incl.sh
+            ;;
+      esac
+    }
+#------------------------------------------------------------------------------#
+#                    If Main_Menu Directory exists - remove it                 #
+#------------------------------------------------------------------------------#
+  ## _source_menu_dir_test ##
+  # Test for Main_Menu directory
+    _source_menu_dir_test() {
+      [ -d "Main_Menu" ] && DIR_TEST=1 || DIR_TEST=0
+      case ${DIR_TEST} in
+        1)  rm -rf ${SOURCE}/Main_Menu && mkdir ${SOURCE}/Main_Menu
+            ;;
+        0)  mkdir ${SOURCE}/Main_Menu
+            ;;
+      esac
+    }
+#------------------------------------------------------------------------------#
+#          If Main_Menu/Plugin files exists - remove it and touch new one      #
+#            Searches for *.conf files and loads them into Plugin file         #
+#------------------------------------------------------------------------------#
+  ## _source_plugin_test ##
+  # Search and Test Plugins for Current OS Compatiblity
+  # Searches for the OS_TYPE Values and Creates Main_Menu/Plugin.* list files
+    _source_plugin_test() {
+      # Check for existing Main_Menu/Plugin file and remove
+        [ -f Main_Menu/Plugin ] && PLUGIN_TEST=1 || PLUGIN_TEST=0
+        case ${PLUGIN_TEST} in
+          1)  rm Main_Menu/Plugin && touch Main_Menu/Plugin
+              ;;
+          0)  touch Main_Menu/Plugin
+              ;;
+        esac
+      # Populate Main_Menu/Plugin file with list of all current Plugins
+        find . -type f -name "*.conf" \
+          ! -path "./.git/*" \
+          ! -path "./Node/*" \
+          | sed 's/\.\///g' \
+          | xargs grep -F OS_TYPE \
+          | tr -d ":" >> Main_Menu/Plugin
+      }
+#------------------------------------------------------------------------------#
+#   Uses Main_menu/Plugin file to see if plugin is compatible for current OS   #
+#               Then loads answers into ${SOURCE}/inch.sh                      #
+#                Includes *.conf, *.menu, *.plugin files                       #
+#------------------------------------------------------------------------------#
+  ## _source_plugin_include ##
+  # Include Compatible Plugin Files from Main_Menu/Plugin
+    _source_plugin_include() {
+    # Create Compatible Plugin Files from Main_Menu/Plugin File
+        awk -v os="OS_TYPE=\"$(uname -s)\"" '{if ( $2 == os ) {print$1}}' \
+          Main_Menu/Plugin >> Main_Menu/Plugin.conf
+        awk -v os="OS_TYPE=\"ALL\"" '{if ( $2 == os ) {print$1}}' \
+          Main_Menu/Plugin >> Main_Menu/Plugin.conf
+        sed 's/.conf/.menu/g' Main_Menu/Plugin.conf >> Main_Menu/Plugin.menu
+        sed 's/.conf/.plugin/g' Main_Menu/Plugin.conf >> Main_Menu/Plugin.plugin
+        [ -f Main_Menu/Plugin.conf ] && PLUGIN_LIST=1 || PLUGIN_LIST=0
+        case ${PLUGIN_LIST} in
+          1)  _source_conf_scripts
+              _source_menu_scripts
+              _source_plugin_scripts
+              ;;
+          0)  echo "No plugin's added... Empty Main Menu"
+              ;;
+        esac
+    }
+  #----------------------------------------------------------------------------#
+  ## _source_conf_scripts ##
+  # Execute to populate configs
+  # Includes New Compatiblity Check
+    _source_conf_scripts() {
+      awk '{print"source "$1}' Main_Menu/Plugin.conf >> incl.sh
+    }
+  #----------------------------------------------------------------------------#
+  ## _source_menu_scripts ##
+  # Execute to populate menus functions
+    _source_menu_scripts() {
+      awk '{print"source "$1}' Main_Menu/Plugin.menu >> incl.sh
+    }
+  #----------------------------------------------------------------------------#
+  ## _source_sh_scripts ##
+  # Execute to populate source scripts
+    _source_plugin_scripts() {
+      awk '{print"source "$1}' Main_Menu/Plugin.plugin >> incl.sh
+    }
+#------------------------------------------------------------------------------#
+#               Adds Base.plugin and Plugin Tools to incl.sh                   #
+#------------------------------------------------------------------------------#
+  ## _source_base_plugin ##
+  # Tests for Base folder and Base Plugin and adds or exits
+    _source_base_plugin() {
+      [ -f Base/Base.plugin ] && BASE_TEST=1 || BASE_TEST=0
+      case ${BASE_TEST} in
+        1)  echo "source Base/Base.plugin" >> incl.sh
+            ;;
+        0)  echo "Missing Base Plugin Directory and Files! Exiting...."
+            exit
+            ;;
+      esac
+    }
+  #----------------------------------------------------------------------------#
+  ## _source_plugin_tool ##
+  # Tests for Base folder and Plugin Plugin and adds or exits
+    _source_plugin_tool() {
+      [ -f Base/Plugin_tools.plugin ] && PLUGIN_TOOL_TEST=1 || PLUGIN_TOOL_TEST=0
+      case ${PLUGIN_TOOL_TEST} in
+        1)  echo "source Base/Plugin_tools.plugin" >> incl.sh
+            ;;
+        0)  echo "Missing Plugin_tools Plugin Directory and Files! Exiting...."
+            exit
+            ;;
+      esac
+    }
+#------------------------------------------------------------------------------#
+#      Uses incl.sh to find plugin menus and create dynamic menu.sh            #
+#------------------------------------------------------------------------------#
+  ## _source_menu_name_config ##
+  # Create Menu Entries
+  # Sparces incl.sh for menu entries and extracts the *_ENTRY_NAME variables
+  # The Menu Name is sparced from the .conf file
+  # Variables are used in Main Menu Dynamic creation
+    _source_menu_name_config() {
+      # Assembling list of Menu Names
+        grep -F .conf incl.sh | awk '{print$2}' | \
+          xargs grep -F _ENTRY_NAME | \
+          awk BEGIN'{FS="=";OFS="\t"}{print"    "$2}' > Main_Menu/menu_name.tmp
+      # Add Plugin Config Edit to Main Menu
+        echo "    \"Edit Plugin Configuration Files\"" >> Main_Menu/menu_name.tmp
+        echo "    \"Resolve Plugin Configuration Names\"" >> Main_Menu/menu_name.tmp
+      # Formatting of Function Name Array
+        echo "  MENU_LIST=(" > Main_Menu/menu_name.list
+        cat  Main_Menu/menu_name.tmp >> Main_Menu/menu_name.list
+        echo '    "Exit"' >> Main_Menu/menu_name.list
+        echo "  )" >> Main_Menu/menu_name.list
+    }
+  #----------------------------------------------------------------------------#
+  ## _source_menu_function_config ##
+  # Create Menu entries corresponding function
+  # Sparces incl.sh for menu entries and extracts the *_ENTRY_NAME variables
+  # Variables are used in Main Menu Dynamic creation
+    _source_menu_function_config() {
+      # Assembling list of Menu Functions
+        grep -F .menu incl.sh | awk '{print$2}' | \
+          xargs grep -F _menu\(\) | \
+          tr -d "(){:" | \
+          awk '{print"    "$2}' > Main_Menu/menu_func.tmp
+      # Add Plugin Config Edit functions to Main Menu
+        echo "    _plugin_config_edit" >> Main_Menu/menu_func.tmp
+        echo "    _plugin_resovle_variables" >> Main_Menu/menu_func.tmp
+      # Formatting of Function Command Array
+        echo "  MENU_CMD=(" > Main_Menu/menu_func.list
+        cat Main_Menu/menu_func.tmp >> Main_Menu/menu_func.list
+        echo "    exit" >> Main_Menu/menu_func.list
+        echo "  )" >> Main_Menu/menu_func.list
+    }
+  #----------------------------------------------------------------------------#
+  ## _create_main_menu ##
+  # Assemble the main menu - Uses the starting script name as the Main Menu Header
+    _create_main_menu() {
+      echo "Main_Menu()  {" > menu.sh
+      echo "  HEADING=\"$(basename $0) Menu\""  >> menu.sh
+      cat Main_Menu/menu_name.list >> menu.sh
+      cat Main_Menu/menu_func.list >> menu.sh
+      echo "  _menu_function" >> menu.sh
+      echo "}" >> menu.sh
+    }
+  #----------------------------------------------------------------------------#
+  ## _remove_main_menu_files ##
+  # Cleanup Remianing files in Main_Menu Directory
+    _remove_main_menu_files() {
+      rm Main_Menu/Plugin
+      rm Main_Menu/Plugin.conf
+      rm Main_Menu/Plugin.menu
+      rm Main_Menu/Plugin.plugin
+      rm Main_Menu/menu_name.tmp
+      rm Main_Menu/menu_func.tmp
+      rm Main_Menu/menu_name.list
+      rm Main_Menu/menu_func.list
+      rmdir Main_Menu
+    }
+#------------------------------------------------------------------------------#
+#                   Set Permissions and ownership of all                       #
+#                *.menu, *.conf, *.plugin, and *.sh scripts                    #
+#------------------------------------------------------------------------------#
+  ## _source_set_permissions ##
+  # Execute to set mode on scripts
+    _source_set_permissions() {
+      find . -type f -name "*.plugin" \
+        ! -path "./.git/*" \
+        ! -path "./Node/*" \
+        ! -name "incl.sh" \
+        | xargs chmod 755
+      find . -type f -name "*.menu" \
+        ! -path "./.git/*" \
+        ! -path "./Node/*" \
+        ! -name "incl.sh" \
+        | xargs chmod 755
+    }
+  #----------------------------------------------------------------------------#
+  ## _source_menu_sh_scripts ##
+  # Execute to populate menus functions
+    _source_menu_sh_scripts() {
+      find . -type f -name "*.sh" \
+        ! -path "./.git/*" \
+        ! -path "./Node/*" \
+        ! -name "incl.sh" \
+        | sed 's/\.\///g' \
+        | awk '{print"source "$0}' >> incl.sh
+    }
+  #----------------------------------------------------------------------------#
+  ## _source_set_owner ##
+  # Set ownership of working directories
+    _source_set_owner() {
+      chown -R ${SYSTEM_USER}:${SYSTEM_GROUP} ${SOURCE}
+    }
+#------------------------------------------------------------------------------#
+#                                 Main Execute                                 #
+#           Runs the Main Functions to create and source files to              #
+#                             finally run Main_Menu                            #
+#------------------------------------------------------------------------------#
+  # Create Source File: ./incl.sh
+  # Automatically updates incl.sh to include all *.conf, *.menu and *.plugin
+  #  in the tree except .git folders, and incl.sh
+    _source_incl_rm
+    _source_menu_dir_test
+    _source_plugin_test
+    _source_plugin_include
+    _source_base_plugin
+    _source_plugin_tool
+    _source_menu_name_config
+    _source_menu_function_config
+    _create_main_menu
+    _source_menu_sh_scripts
+    _remove_main_menu_files
+    _source_set_permissions
+    #_source_set_owner
+#------------------------------------------------------------------------------#
+#                       Setup to Run Main_Menu Function                        #
+#------------------------------------------------------------------------------#
+  # Set Sources to freshly updated incl.sh
+    source incl.sh
+  #----------------------------------------------------------------------------#
+  # Execute set color function
+    #[ $(uname -s) == "Darwin" ] && _set_colors_darwin || _set_colors_darwin
+  #----------------------------------------------------------------------------#
+  # Execute startup user test
+    #_user_tests
+#------------------------------------------------------------------------------#
+#         Execute dynaically create Main_Menu function from menu.sh            #
+#------------------------------------------------------------------------------#
+  clear
+  Main_Menu
+#------------------------------------------------------------------------------#
