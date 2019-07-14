@@ -56,9 +56,9 @@
       else
         for i in ${PID_LIST[@]}; do
           if [[ $(uname -s) == "Darwin" ]]; then
-            lsof -p $i | awk '/cwd/{print$NF}' > ${NODE_ROOT_LIST}
+            lsof -p $i | awk '/cwd/{print$NF}' >> ${NODE_ROOT_LIST}
           else
-            ls -l /proc/$i/cwd | awk '{print$NF}' > ${NODE_ROOT_LIST}
+            ls -l /proc/$i/cwd | awk '{print$NF}' >> ${NODE_ROOT_LIST}
           fi
         done
         POOLCONTROLLER_STATUS_TEST=($(awk <${NODE_ROOT_LIST} -v pid_root="${POOL_CONTROLLER_DIR}" '$0~pid_root{print"1"}'))
