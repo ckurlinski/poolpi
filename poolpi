@@ -70,6 +70,7 @@
       # Populate Main_Menu/Plugin file with list of all current Plugins
         find . -type f -name "*.conf" \
           ! -path "./.git/*" \
+          ! -path "./.vscode/*" \
           ! -path "./Node/*" \
           | sed 's/\.\///g' \
           | xargs grep -F OS_TYPE \
