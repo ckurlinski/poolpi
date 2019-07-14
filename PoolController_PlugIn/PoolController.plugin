@@ -49,19 +49,25 @@
   ## _pool_controller_pid_test ##
   # Test if this install of poolcontroller is running and what PID it is using
     _pool_controller_pid_test() {
-      NODE_ROOT_LIST="${SOURCE}/NODE_RUNNING_PIDS"
+      NODE_RUNNING_PIDS="${NODE_SANDBOX}/NODE_RUNNING_PIDS"
+      if [[ -f ${NODE_RUNNING_PIDS} ]]; then
+        rm ${NODE_RUNNING_PIDS}
+        touch ${NODE_RUNNING_PIDS}
+      else
+        touch ${NODE_RUNNING_PIDS}
+      fi
       PID_LIST=($(pgrep node))
       if [[ -z ${PID_LIST[@]} ]]; then
         POOLCONTROLLER_STATUS_TEST=0
       else
         for i in ${PID_LIST[@]}; do
           if [[ $(uname -s) == "Darwin" ]]; then
-            lsof -p $i | awk '/cwd/{print$NF}' >> ${NODE_ROOT_LIST}
+            lsof -p $i | awk '/cwd/{print$NF}' >> ${NODE_RUNNING_PIDS}
           else
-            ls -l /proc/$i/cwd | awk '{print$NF}' >> ${NODE_ROOT_LIST}
+            ls -l /proc/$i/cwd | awk '{print$NF}' >> ${NODE_RUNNING_PIDS}
           fi
         done
-        POOLCONTROLLER_STATUS_TEST=($(awk <${NODE_ROOT_LIST} -v pid_root="${POOL_CONTROLLER_DIR}" '$0~pid_root{print"1"}'))
+        POOLCONTROLLER_STATUS_TEST=($(awk <${NODE_RUNNING_PIDS} -v pid_root="${POOL_CONTROLLER_DIR}" '$0~pid_root{print"1"}'))
         #echo "1 POOLCONTROLLER_STATUS_TEST = ${POOLCONTROLLER_STATUS_TEST}"
         if [[ -z ${POOLCONTROLLER_STATUS_TEST} ]];then POOLCONTROLLER_STATUS_TEST=0; fi
       fi
