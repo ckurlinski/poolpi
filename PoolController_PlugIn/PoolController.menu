@@ -21,7 +21,8 @@
           "Stop PoolController"
           "Install Pool Controller"
           "Update PoolController Installation"
-          "Pool Service Compatible executable file builder"
+          "Pool Service Compatible executable File Builder"
+          "Edit config.json expressPort "
           "Return"
         )
       # Command map
@@ -34,6 +35,7 @@
           '_pool_controller_install'
           '_pool_controller_update'
           '_poolcontroller_service_file_builder'
+          '_pool_controller_edit_port'
           'Main_Menu'
           )
       # Execute Menu

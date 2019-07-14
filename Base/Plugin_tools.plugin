@@ -27,8 +27,6 @@
               REMOVE_LIST+=$(find . -type f -name *_START | tr -d "./" | awk -v s="${SOURCE}/" '{print s$0" "}')
             # Find Remaining _RESTART Files
               REMOVE_LIST+=$(find . -type f -name *_RESTART | tr -d "./" | awk -v s="${SOURCE}/" '{print s$0" "}')
-            # Find Remaining _PIDS Files
-              REMOVE_LIST+=$(find . -type f -name *_PIDS | tr -d "./" | awk -v s="${SOURCE}/" '{print s$0" "}')
             # Find Remaining menu.sh Files
               REMOVE_LIST+=$(echo "menu.sh" | awk -v s="${SOURCE}/" '{print s$0" "}')
             # Find Remaining incl.sh Files

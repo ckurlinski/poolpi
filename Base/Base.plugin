@@ -244,11 +244,11 @@
   # Warning text formatting function
     _warning() {
       _text_input_formatting "${1}"
-      awk -v s=${SEP_WIDTH} 'BEGIN {
-        for(c=0;c<s;c++)
-        printf "\033[103m "
-        printf "\033[0m \n"
-      }'
+      #awk -v s=${SEP_WIDTH} 'BEGIN {
+      #  for(c=0;c<s;c++)
+      #  printf "\033[103m "
+      #  printf "\033[0m \n"
+      #}'
       awk \
         -v s="${TEXT_WIDTH}" \
         -v i="${TEXT_INPUT[@]}" \
@@ -261,11 +261,11 @@
           printf "\033[00m"
           printf "\033[0m \n"
         }'
-      awk -v s=${SEP_WIDTH} 'BEGIN {
-          for(c=0;c<s;c++)
-          printf "\033[103m "
-          printf "\033[0m \n"
-        }'
+      #awk -v s=${SEP_WIDTH} 'BEGIN {
+      #    for(c=0;c<s;c++)
+      #    printf "\033[103m "
+      #    printf "\033[0m \n"
+      #  }'
     }
   #----------------------------------------------------------------------------#
   ## _note ##

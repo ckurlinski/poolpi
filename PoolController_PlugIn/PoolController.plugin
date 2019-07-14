@@ -71,7 +71,6 @@
         #echo "1 POOLCONTROLLER_STATUS_TEST = ${POOLCONTROLLER_STATUS_TEST}"
         if [[ -z ${POOLCONTROLLER_STATUS_TEST} ]];then POOLCONTROLLER_STATUS_TEST=0; fi
       fi
-    #echo "2 POOLCONTROLLER_STATUS_TEST = ${POOLCONTROLLER_STATUS_TEST}"
     }
   #----------------------------------------------------------------------------#
   ## _pool_controller_run ##
@@ -241,7 +240,107 @@
 #------------------------------------------------------------------------------#
 #                        nodejs-poolController config.json                     #
 #------------------------------------------------------------------------------#
-  ##
+  ## _pool_controller_port_array ##
+  # Sparces existing Node PIDS currently running and finds next port
+    _pool_controller_port_array() {
+      # Test for OS
+      if [[ $(uname -s) == "Darwin" ]]; then
+        # Run for MACOS
+        POOLCONTROLLER_PORT_ARRAY=
+        for i in ${PID_LIST[@]}; do
+          POOLCONTROLLER_PORT_ARRAY+=$(lsof -p $i |\
+            awk '/cwd/ {print$NF}' |\
+            xargs -n 1 bash -c 'cat $0/config.json' |\
+            awk -F : '/expressPort/ {gsub(/,$/,"");print$NF;exit}')
+        done
+      else
+        # Run for Linux
+        POOLCONTROLLER_PORT_ARRAY=
+        for i in ${PID_LIST[@]}; do
+          POOLCONTROLLER_PORT_ARRAY+=$(ls -l /proc/$i/cwd |\
+            awk '/cwd/ {print$NF}' |\
+            xargs -n 1 bash -c 'cat $0/config.json' |\
+            awk -F : '/expressPort/ {gsub(/,$/,"");print$NF;exit}')
+        done
+      fi
+    }
+  #----------------------------------------------------------------------------#
+  ## _pool_controller_port_check ##
+  # Sparces existing Node PIDS currently running and selects a usable port
+    _pool_controller_port_check(){
+      # Create Node PID List
+      PID_LIST=($(pgrep node))
+      if [[ -z ${PID_LIST[@]} ]]; then
+        # If Node PID List Empty, Escapes
+        _checking "Checking: Looking for running ports on Localhost"
+        _error "No node / expressPort proccesses open..."
+      else
+        # If Node PID List ! -z, then procceds to create array
+          _checking "Checking: running ports on Localhost"
+        # Run to create Running Node / expressPort array
+          _pool_controller_port_array
+          _warning "Running Port list: ${POOLCONTROLLER_PORT_ARRAY[@]}"
+          _checking "Checking: Finding Highest running port on Localhost"
+        # Search for Highest Number in Running Node / expressPort Port
+          HIGH_PORT=0
+          for n in ${POOLCONTROLLER_PORT_ARRAY[@]}; do
+            if (( $n > $HIGH_PORT )); then HIGH_PORT=$n; fi
+          done
+          _success "Highest running port: ${HIGH_PORT}"
+        # Create Value to increment Node / expressPort
+          _checking "Checking: Suggestion for Node / expressPort..."
+          NEW_PORT=$((${HIGH_PORT} + 10))
+          _success "Suggested port: ${NEW_PORT}"
+      fi
+    }
+  #----------------------------------------------------------------------------#
+  ## _pool_controller_config_test ##
+  # Checks if config.json is available
+  # Edits local nodejs-poolController config.json expressPort
+    _pool_controller_config_test() {
+      # Test for config.json
+      _checking "Checking: nodejs-poolController config.json"
+      [ -f "${POOL_CONTROLLER_CONFIG}" ] && CONFIG_JSON_TEST=1 || CONFIG_JSON_TEST=0
+      case ${CONFIG_JSON_TEST} in
+        1)  _success "Found: nodejs-poolController config.json";;
+        0)  _error "Missing: nodejs-poolController config.json";;
+      esac
+    }
+  #----------------------------------------------------------------------------#
+  ## _pool_controller_edit_port ##
+  # Edit config.json expressPort
+    _pool_controller_edit_port() {
+      _pool_controller_port_check
+      # Aborts if config.json is missing
+        if [[ ${CONFIG_JSON_TEST} -eq 0 ]];then
+          _error "Missing: nodejs-poolController config.json"
+          break 1
+        fi
+      # Retrieve Existing value for expressPort in config.json
+        OLD_PORT="$(awk -F : '/expressPort/ {gsub(/,$/,"");print$NF;exit}' ${POOL_CONTROLLER_CONFIG})"
+        _note "Old expressPort = ${OLD_PORT} / New expressPort = ${NEW_PORT}"
+        _query "Proceed with expressPort change ( y | Y )?"
+        read ANSWER
+        _ans_check
+        case ${ANSWER} in
+          y | Y )   _note "Changing expressPort: ${NEW_PORT}..."
+                    awk -v old="${OLD_PORT}" -v new="${NEW_PORT}" \
+                      -F : '{gsub(old,new,$0);print$0}' \
+                      ${POOL_CONTROLLER_CONFIG} > ${POOL_CONTROLLER_CONFIG}.tmp
+                      mv ${POOL_CONTROLLER_CONFIG}.tmp ${POOL_CONTROLLER_CONFIG}
+                  ;;
+              * )   _error "Cancelling changes..."
+                  ;;
+        esac
+        _checking "Checking: Current expressPort..."
+        CURRENT_PORT="$(awk -F : '/expressPort/ {gsub(/,$/,"");print$NF;exit}' ${POOL_CONTROLLER_CONFIG})"
+        [ "${CURRENT_PORT}" == "${OLD_PORT}" ] && POOL_CONTROLLER_PORT_TEST=1 \
+        || [ "${CURRENT_PORT}" == "${NEW_PORT}" ] && POOL_CONTROLLER_PORT_TEST=2
+        case ${POOL_CONTROLLER_PORT_TEST} in
+          1) _success "Current expressPort = ${OLD_PORT}";;
+          2) _success "Current expressPort = ${NEW_PORT}";;
+        esac
+    }
 #------------------------------------------------------------------------------#
 #              Checks of Device Status if PoolController is Running            #
 #------------------------------------------------------------------------------#
