@@ -312,6 +312,7 @@
     _pool_controller_edit_port() {
       _pool_controller_port_check
       # Aborts if config.json is missing
+      [ -f "${POOL_CONTROLLER_CONFIG}" ] && CONFIG_JSON_TEST=1 || CONFIG_JSON_TEST=0
         if [[ ${CONFIG_JSON_TEST} -eq 0 ]];then
           _error "Missing: nodejs-poolController config.json"
           break 1
