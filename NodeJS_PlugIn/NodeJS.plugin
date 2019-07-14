@@ -1,14 +1,15 @@
 #!/bin/bash
 #------------------------------------------------------------------------------#
-#                    NodeJS Directory, Install, and PATH Tests                 #
+#                   NodeJS Directory, Install, and PATH Tests                  #
 #------------------------------------------------------------------------------#
   ## _nodejs_install_dir ##
   # Test if NodeJS install Directory is availble
     _nodejs_install_dir() {
-      _checking "Checking for NodeJS install Directory..."
-      [ -d ${NODE_DIR} ] && NODEJS_DIR_TEST=1 || NODEJS_DIR_TEST=0
-      case ${NODEJS_DIR_TEST} in
+      _checking "Checking: for NodeJS install Directory..."
+      [ -d ${NODE_BASE} ] && NODE_BASE_TEST=1 || NODE_BASE_TEST=0
+      case ${NODE_BASE_TEST} in
         1)  _error "NodeJS Directory Exists, Cancelling Installation...."
+            break 1
             ;;
         0)  _success "NodeJS Directory is missing, Continuing Installation..."
             ;;
@@ -18,8 +19,8 @@
   ## _nodejs_install_check ##
   # Check if NodsJS is currently installed
     _nodejs_install_check() {
-      _checking "Checking if NodeJS is currently installed..."
-      [ -f ${NODE_CMD_DIR}/node ] && NODEJS_INSTALLED=1 || NODEJS_INSTALLED=0
+      _checking "Checking: if NodeJS is currently installed..."
+      [ -f ${NODE_CMD} ] && NODEJS_INSTALLED=1 || NODEJS_INSTALLED=0
       case ${NODEJS_INSTALLED} in
         1)  _error "The node command is installed, Cancelling Installation...."
             break 1
@@ -32,20 +33,20 @@
   ## _nodejs_node_cmd_check ##
   # Checks if the ${NODE_CMD} expands to a valid path
     _nodejs_node_cmd_check() {
-      _checking "Checking for node command..."
+      _checking "Checking: NodeJS Installation..."
       [ -f ${NODE_CMD} ] && NODEJS_CMD_TEST=1 || NODEJS_CMD_TEST=0
       case ${NODEJS_CMD_TEST} in
         1)  _success "Current install NodeJS Version: $(${NODE_CMD} -v)"
             ;;
         0)  _error "NodeJS is not currently installed"
-            ;; 
+            ;;
       esac
     }
   #----------------------------------------------------------------------------#
   ## _nodejs_node_cmd_incl_check ##
   # Test if the incl.sh file contains a ${NODE_CMD} PATH
     _nodejs_node_cmd_incl_check() {
-      _checking "Checking current incl.sh for node command path..."
+      _checking "Checking: current incl.sh for node command path..."
       NODE_CMD_PATH=($(grep -F ${NODE_PATH} ${SOURCE}/incl.sh))
       [[ -z ${NODE_CMD_PATH} ]] && NODE_CMD_PATH_TEST=1 || NODE_CMD_PATH_TEST=0
       case ${NODE_CMD_PATH_TEST} in
@@ -65,20 +66,20 @@
   ## _nodejs_npm_path_check ##
   # Checks if the ${NPM_CMD} expands to a valid path
     _nodejs_npm_path_check() {
-      _checking "Checking for npm command..."
+      _checking "Checking: for npm command..."
       [ -f ${NPM_CMD} ] && NPM_CMD_TEST=1 || NPM_CMD_TEST=0
       case ${NPM_CMD_TEST} in
         1)  _success "Found NPM Command: ${NPM_CMD}"
             ;;
         0)  _error "NodeJS is not currently installed"
-            ;; 
+            ;;
       esac
     }
   #----------------------------------------------------------------------------#
   ## _nodejs_npm_path_incl_check ##
   # Test if the incl.sh file contains a ${NPM_CMD} PATH
     _nodejs_npm_path_incl_check() {
-      _checking "Checking current incl.sh for npm command path..."
+      _checking "Checking: current incl.sh for npm command path..."
       NPM_CMD_PATH=($(grep -F ${NPM_CMD} ${SOURCE}/incl.sh))
       [ -z ${NPM_CMD_PATH} ] && NPM_CMD_PATH_TEST=1 || NPM_CMD_PATH_TEST=0
       case ${NPM_CMD_PATH_TEST} in
@@ -89,6 +90,7 @@
               cd ${SOURCE}
               source incl.sh
               _success "Updating npm PATH...."
+              _checking "Checking: current npm version..."
               _success "Current install NPM Version: $(${NPM_CMD} -v)"
             fi
             ;;
@@ -97,16 +99,29 @@
       esac
     }
   #----------------------------------------------------------------------------#
-  ## _nodejs_installed_version ##
+  ## _nodejs_installation_check ##
   # Test to see if NodeJS is currently installed and add it to incl.sh
-    _nodejs_installed_version() {
+    _nodejs_installation_check() {
         _nodejs_node_cmd_check
         _nodejs_node_cmd_incl_check
         _nodejs_npm_path_check
         _nodejs_npm_path_incl_check
     }
+  #----------------------------------------------------------------------------#
+  ## _nodejs_update_install ##
+  # Update the NodeJS Installation
+    _nodejs_update_install() {
+      case ${NODEJS_CMD_TEST} in
+        1)  _header "Updating NPM"
+            npm -v
+            npm install -g npm
+            ;;
+        0)  _error "NodeJS is not currently installed"
+            ;;
+      esac
+    }
 #------------------------------------------------------------------------------#
-#                              NodeJS and NPM Commands                         #
+#                            NodeJS and NPM Commands                           #
 #------------------------------------------------------------------------------#
   ## _node_npm_command_run ##
   # Input npm commands to run in the current enviorment
@@ -121,6 +136,20 @@
       ${ANSWER}
       _note "Hit the ANY Key to Continue..."
       read huh
+    }
+  #----------------------------------------------------------------------------#
+  ## _nodejs_view_config ##
+  # Review current NPM Config
+    _nodejs_view_config() {
+      case ${NODEJS_CMD_TEST} in
+        1)  _warning "npm current config"
+            ${NPM_CMD} config ls -l
+            _warning "Hit the Any Key to Continue....."
+            read huh
+            ;;
+        0)  _error "NodeJS is not currently installed"
+            ;;
+      esac
     }
 #------------------------------------------------------------------------------#
 #                           NodeJS Install Functions                           #
@@ -161,7 +190,6 @@
   ## _nodejs_version ##
   # Choose NodeJS version
     _nodejs_version() {
-      _nodejs_list
       _note "Choose NodeJS Version"
       LIST_ARRAY=($(cat NodeJS_PlugIn/NodeJS_List))
       _list_template
@@ -173,7 +201,6 @@
   ## _nodejs_download_list ##
   # List NodeJS Downloads
     _nodejs_download_list() {
-      _nodejs_version
       _select "Choose NodeJS to download"
       LIST_ARRAY=($(curl -s ${NODEJS_WEB}${NODEJS_VER}/ \
         | awk 'BEGIN{FS="\"";OFS="\t"}{print$2}' \
@@ -189,47 +216,84 @@
   # Download and extract selected nodejs version to specified directory
     _nodejs_download_extract() {
       # Download NodeJS and extract
-        if [[ -d ${NODEJS_DIR_TEST} ]]; then
+        if [[ -d ${NODE_BASE_TEST} ]]; then
           _success "Directory Available - Installing NodeJS"
         else
-          _error "${NODE_DIR} is missing"
-          _warning "Creating Directory: ${NODE_DIR}"
-          mkdir -p ${NODE_DIR}
+          _error "${NODE_BASE} is missing"
+          _warning "Creating Directory: ${NODE_BASE}"
+          mkdir -p ${NODE_BASE}
         fi
         _header "Downloading ${NODE_SEL}"
-        cd ${NODE_DIR}
+        cd ${NODE_BASE}
         ${NODEJS_DOWNLOAD_CMD} ${NODEJS_WEB}${NODEJS_VER}/${NODE_SEL}
-        [ -f ${NODE_DIR}/${NODE_SEL} ] && NODEJS_DOWNLOAD_TEST=1 || NODEJS_DOWNLOAD_TEST=0
+        [ -f ${NODE_BASE}/${NODE_SEL} ] && NODEJS_DOWNLOAD_TEST=1 || NODEJS_DOWNLOAD_TEST=0
         case ${NODEJS_DOWNLOAD_TEST} in
-          1) _success "$(ls ${NODE_DIR}/${NODE_SEL})"
+          1) _success "$(ls ${NODE_BASE}/${NODE_SEL})"
               ;;
-          0)  _error "${NODE_DIR}/${NODE_SEL} is not downloaded. Aborting...."
+          0)  _error "${NODE_BASE}/${NODE_SEL} is not downloaded. Aborting...."
               break 1
               ;;
         esac
       # Extracting NodeJS to system dir
-        _header "Extracting ${NODE_SEL} to ${NODE_DIR}"
+        _header "Extracting ${NODE_SEL} to ${NODE_BASE}"
         ${NODEJS_EXTRACT_CMD} ${NODE_SEL} --strip=1
         _success "${NODE_SEL} Extracted"
       # remove tmp files / folders
-        _header "Removing tar.xz : ${NODE_DIR}/${NODE_SEL}"
-        ${NODEJS_RM_TEMP} ${NODE_DIR}/${NODE_SEL}
-        _removed "Removed - ${NODE_DIR}/${NODE_SEL}"
+        _header "Removing tar.xz : ${NODE_BASE}/${NODE_SEL}"
+        ${NODEJS_RM_TEMP} ${NODE_BASE}/${NODE_SEL}
+        _removed "Removed - ${NODE_BASE}/${NODE_SEL}"
       #  Returning to Main Menu
+    }
+  #----------------------------------------------------------------------------#
+  ## _nodejs_create_global_config ##
+  # Creates NodeJS Global NPMRC file
+    _nodejs_create_global_config() {
+      NODE_GLOBAL_DEFAULTS_LIST=(
+      "globalconfig=${NODE_GLOBAL_NPMRC}"
+      "userconfig=${NPM_USER_CONFIG}"
+      "cache=${NODE_GLOBAL_CACHE}"
+      "prefix=${NODE_BASE}"
+      "init-module=${NPM_USER_INIT}"
+      )
+      for i in ${NODE_GLOBAL_DEFAULTS_LIST[@]}; do
+        echo $i >> ${NODE_GLOBAL_NPMRC}
+      done
+    }
+  #----------------------------------------------------------------------------#
+  ## _nodejs_create_install_folders ##
+  # Creates Directory Structure for NodeJS Install
+    _nodejs_create_install_folders() {
+      NODE_DIR_LIST=(
+        "${NODE_BASE}"
+        "${NODE_PATH}"
+        "${NODE_GLOBAL_ETC}"
+        "${NPM_USER_CONFIG_PATH}"
+        "${NPM_USER_MODULE_DIR}"
+      )
+      for i in ${NODE_DIR_LIST[@]}; do
+        mkdir -p $i
+      done
     }
   #----------------------------------------------------------------------------#
   ## _nodejs_install ##
   # Install NodeJS
     _nodejs_install() {
-      if [[ ${NODEJS_INSTALLED} -eq 1 ]]; then
-        _error "NodeJS is currently installed"
-        break 1
-      fi
-      _nodejs_install_dir
-      _nodejs_install_check
-      _nodejs_install_cmd
-      _nodejs_download_list
-      _nodejs_download_extract
+      # Tests if NodeJS is Currently Installed and aborts if it is
+        _nodejs_install_dir
+      # Creates NodeJS Directories
+        _nodejs_create_install_folders
+      # Creates NodeJS Global NPMRC file
+        _nodejs_create_global_config
+      # Select is SUDO is required for installation of NodeJS
+        _nodejs_install_cmd
+      # Create list of available NodeJS Versions
+        _nodejs_list
+      # Sparces out OS compatible Version
+        _nodejs_version
+      # List NodeJS OS compatible Downloads
+        _nodejs_download_list
+      # Downloads and Extracts Selected NodeJS to Specified Directory
+        _nodejs_download_extract
       Main_Menu
     }
 #------------------------------------------------------------------------------#
@@ -238,44 +302,45 @@
   ## _nodejs_remove ##
   # Asking for reinstall of NodeJS
     _nodejs_remove() {
-      if [[ ${NODEJS_INSTALLED} -eq 1 ]]; then
+      if [[ ! -d ${NODE_BASE} ]]; then
         _error "NodeJS is not currently installed"
         break 1
       fi
       _warning "Remove the complete NodeJS Installation? ( y | N )"
       read ANS
       case ${ANS} in
-        y|Y)  _checking "Removing ${NODE_BASE}..."
+        y|Y)  _warning "Removing ${NODE_SANDBOX}..."
               # Removing Node Install Directory
-                rm -rf ${NODE_BASE}
-              # Removing Node and NPM Export Paths
-                awk < ${SOURCE}/incl.sh '/source/ {print$0}' >> ${SOURCE}/incl
-                mv ${SOURCE}/incl ${SOURCE}/incl.sh
+                rm -rf ${NODE_SANDBOX}
+              # Removing Node and NPM Export Paths in ${SOURCE}/incl.sh
+                awk < ${SOURCE}/incl.sh '/source/ {print$0}' >> ${SOURCE}/incl.sh
+                mv ${SOURCE}/incl.sh ${SOURCE}/incl.sh
                 source ${SOURCE}/incl.sh
-              # Test whether Node Install Directory was Removed 
-                [ -d ${NODE_BASE} ] && NODEJS_INSTALLED=1 || NODEJS_INSTALLED=0
+              # Test whether Node Install Directory was Removed
+                _checking "Checking: ${NODE_SANDBOX}..."
+                [ -d ${NODE_SANDBOX} ] && NODEJS_INSTALLED=1 || NODEJS_INSTALLED=0
                 case ${NODEJS_INSTALLED} in
-                  1)  _error "Unable to Remove ${NODE_BASE}, Aborting...."
+                  1)  _error "Unable to Remove ${NODE_SANDBOX}, Aborting...."
                       break 1
                       ;;
-                  0)  _success "${NODE_BASE} removed"
-                      _header "Returning to Main Menu"
+                  0)  _success "${NODE_SANDBOX} removed"
+                      _note "Returning to Main Menu"
                       Main_Menu
                       ;;
                 esac
               ;;
-        *)  _note "Leaving ${NODE_BASE} alone, continuing....."
+        *)  _note "Leaving ${NODE_SANDBOX} alone, continuing....."
             break 1
             ;;
       esac
     }
 #------------------------------------------------------------------------------#
-#                       NodeJS Install Node Software from git                  #
+#                     NodeJS Install Node Software from git                    #
 #------------------------------------------------------------------------------#
   ## _get_repo ##
   # Clone Git repo
     _get_repo() {
-      cd ${NODE_MODULE_DIR}
+      cd ${NPM_USER_MODULE_DIR}
       _success "$(pwd)"
       if [[ -z $(find . -type d -name ${GIT_NAME}) ]]; then
         _header "Cloning ${GIT_NAME} into $(pwd)"
@@ -296,9 +361,9 @@
   # Git checkout branch
     _get_branch() {
       _header "Entering global node install directory:"
-      cd ${NODE_MODULE_DIR}/${GIT_NAME}
+      cd ${NPM_USER_MODULE_DIR}/${GIT_NAME}
       _success "$(pwd)"
-      _header "Checking out - ${GIT_NAME}:${GIT_BRANCH}"
+      _header "Checking: out - ${GIT_NAME}:${GIT_BRANCH}"
       git checkout ${GIT_BRANCH}
     }
   #----------------------------------------------------------------------------#
@@ -306,7 +371,7 @@
   # Install software
     _nodejs_git_software_install() {
       _header "Installing ${GIT_NAME}"
-        cd ${NODE_MODULE_DIR}/${GIT_NAME}
+        cd ${NPM_USER_MODULE_DIR}/${GIT_NAME}
         _success "$(pwd)"
         ${NPM_GLOBAL_INSTALL} --silent > /dev/null
       _success "${GIT_NAME} installed"
@@ -394,7 +459,7 @@
   ## _npm_install_test ##
   # npm installed check
     _npm_install_test() {
-      _note "Checking - ${NPM_PACKAGE}"
+      _note "Checking: - ${NPM_PACKAGE}"
       npm -g list ${NPM_PACKAGE} > /dev/null \
         && npm_installed=1 \
         || npm_installed=0
@@ -443,87 +508,31 @@
   ## _nodejs_cmd_config_setup ##
   # First stage config setup after install
     _nodejs_cmd_config_setup() {
-      # Change to 
+      # Change to
       cd ${SOURCE}/NodeJS_PlugIn/usr/local/lib
     }
 #------------------------------------------------------------------------------#
 #               NPM Global and Local Config Tests and Updates                  #
 #------------------------------------------------------------------------------#
-  ## _nodejs_update_install ##
-  # Update the NodeJS Installation
-    _nodejs_update_install() {
-      case ${NODEJS_CMD_TEST} in
-        1)  _header "Updating NPM"
-            npm -v
-            npm install -g npm
-            ;;
-        0)  _error "NodeJS is not currently installed"
-            ;;
-      esac
-    }
-  #----------------------------------------------------------------------------#
-  ## _nodejs_view_config ##
-  # Review current NPM Config
-    _nodejs_view_config() {
-      case ${NODEJS_CMD_TEST} in
-        1)  _warning "npm current config"
-            ${NPM_CMD} config ls -l
-            _warning "Hit the Any Key to Continue....."
-            read huh
-            ;;
-        0)  _error "NodeJS is not currently installed"
-            ;;
-      esac
-    }
-  ## _nodejs_current_user_config_check ##
+  ## _nodejs_check_local_cache ##
   # Check npm if local user config is set
-    _nodejs_current_user_config_check() {
+    _nodejs_check_local_cache() {
+      if [[ ${NODEJS_CMD_TEST} == 0 ]];then
+        _checking "Checking: Node Local Cache..."
+        _error "NodeJS is not Installed, Aborting...."
+      fi
+      _checking "Checking: Node Local Cache..."
       case ${NODEJS_CMD_TEST} in
-        1)  NPM_LOCAL_CACHE=($(npm config get cache))
-            [ ${NPM_USER_CONFIG_PATH} == ${NPM_LOCAL_CACHE} ] && NPM_LOCAL_CACHE_CHECK=1 || NPM_LOCAL_CACHE_CHECK=0
-            if [[ ${NPM_LOCAL_CACHE_CHECK} == 1 ]]; then
-              _success "npm Local Cache is Set"
-            else
-              _error "npm local cache is not set, setting local cache"
-              _nodejs_current_user_config_path
-            fi
+        1)  NODE_LOCAL_CACHE=($(npm config get cache))
+            [ "${NODE_LOCAL_CACHE}" == "${NODE_GLOBAL_CACHE}" ] && NODE_CACHE_CHECK=1 || NODE_CACHE_CHECK=0
+            case ${NODE_CACHE_CHECK} in
+              1)  _success "Node Global Cache is Set"
+                  ;;
+              0)  _error "Node Global cache is not set..."
+                  ;;
+            esac
             ;;
         0)  _error "NodeJS is not currently installed"
-              ;; 
-      esac
-    }
-  #--------------------------------------------------------------------------#
-  ## _nodejs_current_user_config_path ##
-  # Get current user ID and Primary Group
-    _nodejs_current_user_config_path() {
-      _note "Checking if NodeJS is installed..."
-      case ${NODEJS_CMD_TEST} in
-        1) _note "NodeJS is installed, continuing...."
-          [ -d ${NPM_USER_CONFIG_PATH} ] && NPM_USER_CONFIG_PATH_TEST=1 || NPM_USER_CONFIG_PATH_TEST=0
-          case ${NPM_USER_CONFIG_PATH_TEST} in
-            1)  _success "NPM Default User Home Folder is Availble"
-                _note "Testing for userconfig: ${NPM_USER_CONFIG_PATH}/npmrc"
-                if [[ -f "${NPM_USER_CONFIG_PATH}/npmrc" ]]; then
-                  _success "$(npm config get userconfig)"
-                else
-                  touch ${NPM_USER_CONFIG_PATH}/npmrc
-                  _success "Setting NPM userconfig defaults...."
-                  npm config set userconfig ${NPM_USER_CONFIG_PATH}/npmrc
-                fi
-                ;;
-            0)  _error "Missing NPM Default User Home Folder"
-                _note "NPM Default User Home Folder:"
-                _note "${NPM_USER_CONFIG_PATH}"
-                mkdir -p ${NPM_USER_CONFIG_PATH}
-                _note "creating userconfig:"
-                _note "${NPM_USER_CONFIG_PATH}/npmrc"
-                touch ${NPM_USER_CONFIG_PATH}/npmrc
-                _note "Setting NPM userconfig defaults...."
-                npm config set userconfig ${NPM_USER_CONFIG_PATH}/npmrc
-                ;;
-          esac
-          ;;
-        0)  _error "Userconfig - NodeJS is not installed, Aborting....."
             ;;
       esac
     }
@@ -531,50 +540,27 @@
   ## _nodejs_check_global_cache ##
   # Check if the global cache has been set
     _nodejs_check_global_cache() {
-      _note "Checking NPM global settings"
       if [[ ${NODEJS_CMD_TEST} == 0 ]];then
+        _checking "Checking: Node Global Cache..."
         _error "NodeJS is not Installed, Aborting...."
-      else 
-        _note "Checking npm global cache settings"
-        NPM_GET_CACHE=($(npm config --global get cache))
-        [ ${NPM_GET_CACHE} == ${NPM_CACHE} ] && NPM_CACHE_CHECK=1 || NPM_CACHE_CHECK=0
-        if [[ ${NPM_CACHE_CHECK} == 1 ]]; then
-          _success "npm global cache is set"
-        else
-          _error "npm global cache is not set, setting global cache"
-          _nodejs_set_global
-        fi
+      else
+        _checking "Checking: Node Global Cache..."
+        NPM_GET_GLOBAL_CACHE=($(npm config --global get cache))
+        [ "${NPM_GET_GLOBAL_CACHE}" == "${NODE_GLOBAL_CACHE}" ] && NPM_GET_GLOBAL_CACHE_TEST=1 || NPM_GET_GLOBAL_CACHE_TEST=0
+        case ${NPM_GET_GLOBAL_CACHE_TEST} in
+          1)  _success "npm global cache is set"
+              ;;
+          0)  _error "npm global cache is not set, setting global cache"
+              ;;
+        esac
       fi
     }
   #----------------------------------------------------------------------------#
-  ## _nodejs_set_global ##
-  # Set the global configs
-    _nodejs_set_global() {
-      case ${NODEJS_CMD_TEST} in
-        1)  # Check if Node Cache Directory exists and create it if it dosen't
-            [ -d ${NPM_CACHE} ] && NPM_CACHE_TEST=1 || NPM_CACHE_TEST=0
-            case ${NPM_CACHE_TEST} in
-              1)  _success "NPM Cache exists Setting Global Cache: ${NPM_CACHE}"
-                  npm config --global set cache ${NPM_CACHE}
-                  npm config --global get cache
-                  ;;
-              0)  _note "Creating NPM Cache Directory:"
-                  _note "${NPM_CACHE}"
-                  mkdir -p ${NPM_CACHE} && NPM_CACHE_TEST=1 || NPM_CACHE_TEST=0
-                  case ${NPM_CACHE_TEST} in
-                    1)  _success "NPM Cache Created: Setting Global Cache:"
-                        _success "${NPM_CACHE}"
-                        npm config --global set cache ${NPM_CACHE}
-                        npm config --global get cache
-                        ;;
-                    0)  _error "NPM Cache could not be created, Aborting...."
-                        break 1 ;;
-                  esac
-                  ;;
-            esac
-            ;;
-        0)  _error "NodeJS is not currently installed"
-              ;; 
-        esac
+  ## _nodejs_cache_check ##
+  # Function list to check NodeJS Cache Settings
+    _nodejs_cache_check() {
+      # HUH
+      _nodejs_check_global_cache
+      _nodejs_check_local_cache
     }
 #------------------------------------------------------------------------------#

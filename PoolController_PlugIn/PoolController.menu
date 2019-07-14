@@ -6,11 +6,11 @@
   _pool_controller_menu()  {
       clear
       _query "Checking nodejs-poolController install..."
-      _nodejs_installed_version
-      _nodejs_check_global_cache
-      _nodejs_current_user_config_path
+      _nodejs_installation_check
+      _pool_controller_pid_test
       _pool_controller_install_test
       _pool_controller_status
+      _pool_controller_pid_test
       HEADING="PoolController Menu"
       # Menu listing
         MENU_LIST=(

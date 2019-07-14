@@ -226,10 +226,10 @@
         -v e="${TEXT_WIDTH_REMANDER}" \
         'BEGIN {
           for(c=0;c<s;c++)
-          printf "\033[107m "
-          printf "\033[00;107;91m✖ " i
+          printf "\033[101m "
+          printf "\033[101;97m✖ " i
           for(c=0;c<e;c++)
-          printf "\033[107m "
+          printf "\033[101m "
           printf "\033[0m \n"
         }'
     }

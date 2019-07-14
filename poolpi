@@ -163,6 +163,7 @@
       # Add Plugin Config Edit to Main Menu
         echo "    \"Edit Plugin Configuration Files\"" >> Main_Menu/menu_name.tmp
         echo "    \"Resolve Plugin Configuration Names\"" >> Main_Menu/menu_name.tmp
+        echo "    \"Remove MISC Files - Cleanup for Zipping\"" >> Main_Menu/menu_name.tmp
       # Formatting of Function Name Array
         echo "  MENU_LIST=(" > Main_Menu/menu_name.list
         cat  Main_Menu/menu_name.tmp >> Main_Menu/menu_name.list
@@ -183,6 +184,7 @@
       # Add Plugin Config Edit functions to Main Menu
         echo "    _plugin_config_edit" >> Main_Menu/menu_func.tmp
         echo "    _plugin_resovle_variables" >> Main_Menu/menu_func.tmp
+        echo "    _plugin_remove_misc" >> Main_Menu/menu_func.tmp
       # Formatting of Function Command Array
         echo "  MENU_CMD=(" > Main_Menu/menu_func.list
         cat Main_Menu/menu_func.tmp >> Main_Menu/menu_func.list

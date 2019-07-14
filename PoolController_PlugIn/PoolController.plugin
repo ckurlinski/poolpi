@@ -17,13 +17,13 @@
       }
     #----------------------------------------------------------------------------#
     ## _pool_controller_install_test ##
-    # Test if nodejs-poolController is installled
+    # Test if nodejs-poolController is installed
       _pool_controller_install_test() {
-        _checking "Checking is nodejs-poolController is installled..."
+        _checking "Checking is nodejs-poolController is installed..."
         [ -f ${POOL_CONTROLLER_DIR}/sysDefault.json ] && POOL_CONTROLLER_DIR_TEST=1 || POOL_CONTROLLER_DIR_TEST=0
         case ${POOL_CONTROLLER_DIR_TEST} in
-          1) _success "nodejs-poolController is Installled";;
-          0) _error "nodejs-poolController is Not Installled";;
+          1) _success "nodejs-poolController is Installed";;
+          0) _error "nodejs-poolController is Not Installed";;
         esac
       }
     #----------------------------------------------------------------------------#
@@ -46,21 +46,41 @@
 #------------------------------------------------------------------------------#
 #                 nodejs-PoolController Start and Stop from Menu               #
 #------------------------------------------------------------------------------#
+  ## _pool_controller_pid_test ##
+  # Test if this install of poolcontroller is running and what PID it is using
+    _pool_controller_pid_test() {
+      NODE_ROOT_LIST="${SOURCE}/NODE_RUNNING_PIDS"
+      PID_LIST=($(pgrep node))
+      if [[ -z ${PID_LIST[@]} ]]; then
+        POOLCONTROLLER_STATUS_TEST=0
+      else
+        for i in ${PID_LIST[@]}; do
+          if [[ $(uname -s) == "Darwin" ]]; then
+            lsof -p $i | awk '/cwd/{print$NF}' > ${NODE_ROOT_LIST}
+          else
+            ls -l /proc/$i/cwd | awk '{print$NF}' > ${NODE_ROOT_LIST}
+          fi
+        done
+        POOLCONTROLLER_STATUS_TEST=($(awk <${NODE_ROOT_LIST} -v pid_root="${POOL_CONTROLLER_DIR}" '$0~pid_root{print"1"}'))
+        #echo "1 POOLCONTROLLER_STATUS_TEST = ${POOLCONTROLLER_STATUS_TEST}"
+        if [[ -z ${POOLCONTROLLER_STATUS_TEST} ]];then POOLCONTROLLER_STATUS_TEST=0; fi
+      fi
+    #echo "2 POOLCONTROLLER_STATUS_TEST = ${POOLCONTROLLER_STATUS_TEST}"
+    }
+  #----------------------------------------------------------------------------#
   ## _pool_controller_run ##
   # Run nodejs_PoolController
     _pool_controller_run() {
       case ${POOL_CONTROLLER_DIR_TEST} in
         1)  # Checking for Log Directory
             _pool_controller_log_dir
-            # Checking if nodejs.PoolController is already running
-            [ -z $(pgrep node) ] && POOLCONTROLLER_STATUS_TEST=0 || POOLCONTROLLER_STATUS_TEST=1
             case ${POOLCONTROLLER_STATUS_TEST} in
               0)  _pool_controller_log_rotate
                   _warning "Starting nodejs_PoolController....."
                   cd ${POOL_CONTROLLER_DIR}
-                  node src/index.js 1>${POOL_CONTROLLER_LOG_FILE} 2>&1 & echo \$! > ${POOL_CONTROLLER_PID_FILE}
-                  pgrep node > ${POOL_CONTROLLER_PID_FILE}
+                  node src/index.js 1>${POOL_CONTROLLER_LOG_FILE} 2>&1 & echo $! > ${POOL_CONTROLLER_PID_FILE}
                   _success "nodejs_PoolController - PID = $(cat ${POOL_CONTROLLER_PID_FILE})"
+                  Main_Menu
                   ;;
               1)  _note "nodejs_PoolController is already running, Continuing....."
                   ;;
@@ -90,7 +110,7 @@
         if [[ ${PID_TEST} -eq 0 ]]; then
            _success "nodejs_PoolController Stopped..."
         fi
-        # Rotate Log file 
+        # Rotate Log file
         _pool_controller_log_rotate
         _error "Removing nodejs_PoolController stale PID File"
         rm ${POOL_CONTROLLER_PID_FILE}
@@ -129,7 +149,6 @@
   ## _pool_controller_view_log ##
   # View Tail Log
     _pool_controller_view_log() {
-      [ -z $(pgrep node) ] && POOLCONTROLLER_STATUS_TEST=0 || POOLCONTROLLER_STATUS_TEST=1
       case ${POOLCONTROLLER_STATUS_TEST} in
         1)  _header "Tailing nodejs_PoolController Log File"
             tail ${POOL_CONTROLLER_LOG_FILE}
@@ -146,7 +165,6 @@
   ## _pool_controller_monitor_log ##
   # View Tail Log
     _pool_controller_monitor_log() {
-      [ -z $(pgrep node) ] && POOLCONTROLLER_STATUS_TEST=0 || POOLCONTROLLER_STATUS_TEST=1
       case ${POOLCONTROLLER_STATUS_TEST} in
         1)  _header "Monitoring nodejs_PoolController Log File"
             cat ${POOL_CONTROLLER_LOG_FILE}
@@ -206,28 +224,11 @@
   ## _pool_controller_status ##
   # Test to see if the service is running
     _pool_controller_status() {
-      _note "Geting PoolController Status"
-      [ -z $(pgrep node) ] && POOLCONTROLLER_STATUS_TEST=1 || POOLCONTROLLER_STATUS_TEST=0
+      _checking "Checking: PoolController Status..."
       case ${POOLCONTROLLER_STATUS_TEST} in
-        1)  _error "PoolController is Not Running";;
-        0)  _success "PoolController is Running"
+        0)  _error "PoolController is Not Running";;
+        1)  _success "PoolController is Running"
             _pool_controller_usb_status
-            ;;
-      esac  
-    }
-  #----------------------------------------------------------------------------#
-  ## _pool_controller_pid_lookup ##
-  # Lookup pid to see if nodejs_PoolController is running
-    _pool_controller_pid_lookup() {
-      [ -z $(pgrep node) ] && POOLCONTROLLER_STATUS_TEST=0 || POOLCONTROLLER_STATUS_TEST=1
-      case ${POOLCONTROLLER_STATUS_TEST} in
-        1)  _success "nodejs_PoolController is currently running"
-            POOLCONTROLLER_PID=($(pgrep node))
-            POOLCONTROLLER_NPM_PID=($(pgrep npm))
-            _note "Current nodejs_PoolController
-            PID - ${POOLCONTROLLER_PID}"
-            ;;
-        0)  _warning "nodejs_PoolController is currently Not Running"
             ;;
       esac
     }
@@ -383,7 +384,7 @@
     }
   #----------------------------------------------------------------------------#
   ## _poolcontroller_start_file_builder ##
-  # Pulls in all the variables and initializes the run enviorment 
+  # Pulls in all the variables and initializes the run enviorment
   #   to execute nodejs-PoolController from terminal or service
     _poolcontroller_start_file_builder(){
     echo "
@@ -398,7 +399,7 @@
               lsof -p \${POOL_CMD_PID} | awk '/cwd/{printf \"\033[92;7m Command Root:\033[27m \"\$NF\"\033[00m\n\";exit}'
               lsof -p \${POOL_CMD_PID} | awk '/txt/{printf \"\033[93;7m Command EXE :\033[27m \"\$NF\"\033[00m\n\";exit}'
             else
-              ls -l /proc/\${POOL_CMD_PID}/cwd | awk '{printf \"\033[92;7m Command Root:\033[27m \"\$NF\"\033[00m\n\"\$NF\"\033[00m\n\"}'
+              ls -l /proc/\${POOL_CMD_PID}/cwd | awk '{printf \"\033[92;7m Command Root:\033[27m \"\$NF\"\033[00m\n\"}'
               ls -l /proc/\${POOL_CMD_PID}/exe | awk '{printf \"\033[93;7m Command EXE :\033[27m \"\$NF\"\033[00m\n\"}'
             fi
             ;;
@@ -409,7 +410,7 @@
     }
   #----------------------------------------------------------------------------#
   ## _poolcontroller_stop_file_builder ##
-  # Pulls in all the variables and initializes the run enviorment 
+  # Pulls in all the variables and initializes the run enviorment
   #   to stop nodejs-PoolController from terminal or service
     _poolcontroller_stop_file_builder(){
       echo "
@@ -433,7 +434,7 @@
       #!/bin/bash
       printf \"\033[93;7mSTOPPING:\033[93;27m ${SERVICE_FILE} \033[00m\n\"
       ${STOP_FILE}
-      read -p \"Pausing for 3 seconds\" -t 3 
+      read -p \"Pausing for 3 seconds\" -t 3
       printf \"\033[00m\n\"
       printf \"\033[93;7mSTARTING:\033[93;27m ${SERVICE_FILE} \033[00m\n\"
       ${START_FILE}

@@ -7,6 +7,43 @@
     [ ${OS_NAME} == "Darwin" ] && SED_EDIT_CMD="sed -i .bak" || SED_EDIT_CMD="sed -i"
   }
 #------------------------------------------------------------------------------#
+  ## _plugin_remove_misc ##
+  # Removes MISC files
+    _plugin_remove_misc() {
+      _header "This resets the \${SOURCE} directory to default and removes all customizations"
+      _error "!!You Have Been Warned!!"
+      _query "Continue ( y | N )?"
+      read ANSWER
+      _ans_check
+      case ${ANSWER} in
+        y|Y)
+            # Make sure we are in ${SOURCE} Directory
+              cd ${SOURCE}
+            # Create Removal Array
+              REMOVE_LIST=
+            # Find Remaining _STOP Files
+              REMOVE_LIST+=$(find . -type f -name *_STOP | tr -d "./" | awk -v s="${SOURCE}/" '{print s$0" "}')
+            # Find Remaining _START Files
+              REMOVE_LIST+=$(find . -type f -name *_START | tr -d "./" | awk -v s="${SOURCE}/" '{print s$0" "}')
+            # Find Remaining _RESTART Files
+              REMOVE_LIST+=$(find . -type f -name *_RESTART | tr -d "./" | awk -v s="${SOURCE}/" '{print s$0" "}')
+            # Find Remaining _PIDS Files
+              REMOVE_LIST+=$(find . -type f -name *_PIDS | tr -d "./" | awk -v s="${SOURCE}/" '{print s$0" "}')
+            # Find Remaining menu.sh Files
+              REMOVE_LIST+=$(echo "menu.sh" | awk -v s="${SOURCE}/" '{print s$0" "}')
+            # Find Remaining incl.sh Files
+              REMOVE_LIST+=$(echo "incl.sh" | awk -v s="${SOURCE}/" '{print s$0" "}')
+            echo      ${REMOVE_LIST[@]}
+            for i in ${REMOVE_LIST[@]}; do
+              rm $i
+            done
+            exit
+            ;;
+          *) _success "Aborting, Returning to Main Menu"
+            ;;
+      esac
+    }
+#------------------------------------------------------------------------------#
 ## _select_plugin_config ##
 # Choose Plugin Configuration File to View or Edit
   _select_plugin_config() {
@@ -28,7 +65,7 @@
       PLUGIN_CONFIG_TMP="${SOURCE}/${PLUGIN_NAME}_config.tmp"
     # Define Temp File to edit variable / values
       PLUGIN_CONFIG_TMP1="${PLUGIN_CONFIG_TMP}1"
-    # Define Temp File to Dump Expanded Values 
+    # Define Temp File to Dump Expanded Values
       PLUGIN_CONFIG_VALUES="${SOURCE}/${PLUGIN_NAME}.values"
     # Define Temp File to Dump Expanded Values - Colunm Formatted
       PLUGIN_CONFIG_VALUES_COL="${SOURCE}/${PLUGIN_NAME}.colunm.value"
@@ -99,7 +136,7 @@
               OLD_VALUE=($(awk -v var=${CURRENT_VARIABLE} -F= '{values[$1]=$2} END{print values[var]}' ${PLUGIN_CONFIG_TMP}))
             # Format New Value of Variable
               NEW_VALUE="${ANSWER[@]}"
-            # Show Changes 
+            # Show Changes
               #NEW_VALUE=$(echo ${NEW_VALUE[@]} | awk '{print"\""$0"\""}')
               echo "Old Value: ${OLD_VALUE[@]}"
               echo "Updating Variable to: ${CURRENT_VARIABLE} = ${NEW_VALUE[@]}"
@@ -107,7 +144,7 @@
               awk <${PLUGIN_CONFIG_TMP} -v old="${OLD_VALUE}" -v new="${NEW_VALUE}" -F= '{ gsub(old,new,$0);print$0}' >${PLUGIN_CONFIG_TMP1}
               cat ${PLUGIN_CONFIG_TMP1}
               #cat ${PLUGIN_CONFIG_TMP}
-              read huh 
+              read huh
               #${SED_EDIT_CMD} "s/${OLD_VALUE[@]}/${NEW_VALUE[@]}/g" ${PLUGIN_CONFIG_TMP}
               #cat ${PLUGIN_CONFIG_TMP}
               #read huh
@@ -160,15 +197,15 @@
   ## _export_config_html ##
   # Export Resolved Plugin Configuration File as .html
     _export_config_html() {
-      [ -f ${PLUGIN_NAME}.html ] && rm -rf ${PLUGIN_NAME}.html 
+      [ -f ${PLUGIN_NAME}.html ] && rm -rf ${PLUGIN_NAME}.html
       _query "Export as HTML ( y | N ) ?"
       read ANSWER
       _ans_check
       case ${ANSWER} in
-        y|Y)  
+        y|Y)
             _header "Exporting ${PLUGIN_NAME} as ${PLUGIN_NAME}.html"
             _export_config_json ${PLUGIN_CONFIG_VALUES}
-            # Output the Expanded Variables to ${PLUGIN_NAME}.html 
+            # Output the Expanded Variables to ${PLUGIN_NAME}.html
             echo "<html><head><title>Showing configuration file for: ${PLUGIN_CONFIG}" >> ${PLUGIN_NAME}.html
             echo "</title></head><body>" >> ${PLUGIN_NAME}.html
             echo "<h1>Variable / Values</h1>" >> ${PLUGIN_NAME}.html
