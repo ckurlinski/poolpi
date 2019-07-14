@@ -23,6 +23,7 @@
           "Update PoolController Installation"
           "Pool Service Compatible executable File Builder"
           "Edit config.json expressPort "
+          "Nano Edit nodejs-poolController config.json"
           "Return"
         )
       # Command map
@@ -36,6 +37,7 @@
           '_pool_controller_update'
           '_poolcontroller_service_file_builder'
           '_pool_controller_edit_port'
+          '_pool_controller_edit_config'
           'Main_Menu'
           )
       # Execute Menu

@@ -342,6 +342,22 @@
           2) _success "Current expressPort = ${NEW_PORT}";;
         esac
     }
+  #----------------------------------------------------------------------------#
+  ## _pool_controller_edit_config ##
+  # Nano Edit Command to edit ${POOL_CONTROLLER_CONFIG}
+     _pool_controller_edit_config() {
+      [ -f "${POOL_CONTROLLER_CONFIG}" ] && CONFIG_JSON_TEST=1 || CONFIG_JSON_TEST=0
+      if [[ ${CONFIG_JSON_TEST} -eq 0 ]];then
+        _error "Missing: nodejs-poolController config.json"
+        break 1
+      fi
+      _checking "Nano Edit: ${POOL_CONTROLLER_CONFIG}"
+      ANSWER="$(nano ${POOL_CONTROLLER_CONFIG})"
+      read ANSWER
+      ${ANSWER}
+      _note "Hit the ANY Key to Continue..."
+      read huh
+     }
 #------------------------------------------------------------------------------#
 #              Checks of Device Status if PoolController is Running            #
 #------------------------------------------------------------------------------#
