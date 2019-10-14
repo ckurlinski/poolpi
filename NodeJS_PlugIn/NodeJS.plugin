@@ -164,9 +164,9 @@
             NODEJS_EXTRACT_CMD="tar xJf"
             NODEJS_RM_TEMP="rm"
             ;;
-        0)  NODEJS_DOWNLOAD_CMD="sudo wget -q"
-            NODEJS_EXTRACT_CMD="sudo tar xJf"
-            NODEJS_RM_TEMP="sudo rm"
+        0)  NODEJS_DOWNLOAD_CMD="wget -q"
+            NODEJS_EXTRACT_CMD="tar xJf"
+            NODEJS_RM_TEMP="rm"
             ;;
       esac
     }
