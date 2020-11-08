@@ -20,7 +20,7 @@
     # Test if nodejs-poolController is installed
       _pool_controller_install_test() {
         _checking "Checking is nodejs-poolController is installed..."
-        [ -f ${POOL_CONTROLLER_DIR}/sysDefault.json ] && POOL_CONTROLLER_DIR_TEST=1 || POOL_CONTROLLER_DIR_TEST=0
+        [ -f ${POOL_CONTROLLER_TEST_CONFIG} ] && POOL_CONTROLLER_DIR_TEST=1 || POOL_CONTROLLER_DIR_TEST=0
         case ${POOL_CONTROLLER_DIR_TEST} in
           1) _success "nodejs-poolController is Installed";;
           0) _error "nodejs-poolController is Not Installed";;
@@ -485,7 +485,7 @@
             ;;
       esac
       # Test if nodejs-PoolController Installed
-      [ -f ${POOL_CONTROLLER_DIR}/sysDefault.json ] && POOL_CONTROLLER_DIR_TEST=1 || POOL_CONTROLLER_DIR_TEST=0
+      [ -f ${POOL_CONTROLLER_TEST_CONFIG} ] && POOL_CONTROLLER_DIR_TEST=1 || POOL_CONTROLLER_DIR_TEST=0
       case \${POOL_CONTROLLER_DIR_TEST} in
         1)  printf \"\033[96m 2) \033[92;7mnodejs-poolController:\033[93;27m Installed \033[00m\n\"
             ;;
@@ -552,14 +552,12 @@
   ## _poolcontroller_restart_file_builder ##
   # Creates Script to stop and start daemon
     _poolcontroller_restart_file_builder() {
-      echo "
-      #!/bin/bash
-      printf \"\033[93;7mSTOPPING:\033[93;27m ${SERVICE_FILE} \033[00m\n\"
-      ${STOP_FILE}
-      read -p \"Pausing for 3 seconds\" -t 3
-      printf \"\033[00m\n\"
-      printf \"\033[93;7mSTARTING:\033[93;27m ${SERVICE_FILE} \033[00m\n\"
-      ${START_FILE}
-    " > ${RESTART_FILE}
+      echo "#!/bin/bash" > ${RESTART_FILE}
+      echo "printf \"\033[93;7mSTOPPING:\033[93;27m ${SERVICE_FILE} \033[00m\n\"" >> ${RESTART_FILE}
+      echo "${STOP_FILE}" >> ${RESTART_FILE}
+      echo "read -p \"Pausing for 3 seconds\" -t 3" >> ${RESTART_FILE}
+      echo "printf \"\033[00m\n\"" >> ${RESTART_FILE}
+      echo "printf \"\033[93;7mSTARTING:\033[93;27m ${SERVICE_FILE} \033[00m\n\"" >> ${RESTART_FILE}
+      echo "${START_FILE}" >> ${RESTART_FILE}
     }
 #------------------------------------------------------------------------------#
