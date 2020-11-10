@@ -83,7 +83,7 @@
               0)  _pool_controller_log_rotate
                   _warning "Starting nodejs_PoolController....."
                   cd ${POOL_CONTROLLER_DIR}
-                  node src/index.js 1>${POOL_CONTROLLER_LOG_FILE} 2>&1 & echo $! > ${POOL_CONTROLLER_PID_FILE}
+                  npm start 1>${POOL_CONTROLLER_LOG_FILE} 2>&1 & echo $! > ${POOL_CONTROLLER_PID_FILE}
                   _success "nodejs_PoolController - PID = $(cat ${POOL_CONTROLLER_PID_FILE})"
                   Main_Menu
                   ;;
